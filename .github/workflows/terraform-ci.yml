@@ -1,0 +1,34 @@
+name: Platform Infrastructure CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'modules/**'
+      - 'domains/**'
+
+jobs:
+  terraform-validate:
+    name: 'Terraform Validation & Formatting'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.16.2
+
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive
+
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./domains/h1_gci_marketing
+
+    - name: Terraform Validate
+      run: terraform validate
+      working-directory: ./domains/h1_gci_marketing
