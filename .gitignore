@@ -1,0 +1,15 @@
+# Terraform local state and locks
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.tfstate.lock.info
+
+# Credentials and keys
+*.json
+
+# PyCharm & IDE files
+.idea/
+
+# OS metadata
+.DS_Store
+Thumbs.db
