@@ -1,9 +1,17 @@
 name: Platform Infrastructure CI
 
 on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'modules/**'
+      - 'domains/**'
   pull_request:
     branches:
       - main
+      - master
     paths:
       - 'modules/**'
       - 'domains/**'
