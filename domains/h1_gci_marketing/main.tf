@@ -1,5 +1,20 @@
 # Trigger CI/CD execution pipeline
 
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 8.4.0"
+    }
+  }
+
+  backend "gcs" {
+    bucket = "gcp-terraform-tmp-tfstate-prasanna"
+    prefix = "domains/h1_gci_marketing"
+  }
+}
+
 provider "google" {
   # Initializes GCP connection
 }
