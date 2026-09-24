@@ -8,6 +8,7 @@ on:
     paths:
       - 'modules/**'
       - 'domains/**'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - main
@@ -15,6 +16,7 @@ on:
     paths:
       - 'modules/**'
       - 'domains/**'
+      - '.github/workflows/**'
 
 jobs:
   terraform-validate:
@@ -23,10 +25,10 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
+      uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.16.2
 
