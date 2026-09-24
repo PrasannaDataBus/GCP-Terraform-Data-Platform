@@ -1,4 +1,4 @@
-# Enforcing Governance
+## Enforcing Governance
 
 variable "project_id" {
   description = "The GCP project ID for the domain."
