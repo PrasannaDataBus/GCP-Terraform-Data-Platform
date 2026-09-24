@@ -36,7 +36,7 @@ jobs:
       run: terraform fmt -check -recursive
 
     - name: Terraform Init
-      run: terraform init
+      run: terraform init -backend=false
       working-directory: ./domains/h1_gci_marketing
 
     - name: Terraform Validate
