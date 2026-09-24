@@ -1,3 +1,5 @@
+# Trigger CI/CD execution pipeline
+
 provider "google" {
   # Initializes GCP connection
 }
