@@ -28,15 +28,24 @@ Inspect the remote state bucket ```(gs://gcp-terraform-tmp-tfstate-prasanna)``` 
 **1. Inspect State Bucket Metadata & Versioning**
 
 ```
-gcloud storage buckets describe gs://gcp-terraform-tmp-tfstate-prasanna `
-  --format="yaml(name, location, storageClass, versioning, iamConfiguration.uniformBucketLevelAccess)"
+gsutil versioning get gs://gcp-terraform-tmp-tfstate-prasanna
 ```
 
 ``` 
-> Expected Output: versioning.enabled: true and uniformBucketLevelAccess.enabled: true.
+> Expected Output: gs://gcp-terraform-tmp-tfstate-prasanna: Enabled.
 ```
 
-**2. List Remote State Files & Domain Prefixes**
+**2. Inspect Full State Bucket Configuration**
+
+```
+gcloud storage buckets describe gs://gcp-terraform-tmp-tfstate-prasanna
+```
+
+``` 
+> Expected Verification: Confirm location: EU and versioning.enabled: true.
+```
+
+**3. List Remote State Files & Domain Prefixes**
 
 ```
 gcloud storage ls --recursive gs://gcp-terraform-tmp-tfstate-prasanna/
@@ -46,7 +55,7 @@ gcloud storage ls --recursive gs://gcp-terraform-tmp-tfstate-prasanna/
 gs://gcp-terraform-tmp-tfstate-prasanna/domains/h1_gci_marketing/default.tfstate
 ```
 
-**3. Inspect State File Storage Footprint (Cost Check)**
+**4. Inspect State File Storage Footprint (Cost Check)**
 
 
 ```
