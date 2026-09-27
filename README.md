@@ -15,8 +15,9 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 ### Key Capabilities
 * **Declarative Infrastructure:** 100% of BigQuery datasets, IAM bindings, and lifecycle rules defined as code.
 * **Domain Isolation:** Separate state prefix isolation per domain to minimize blast radius.
+* **Strict Environment & Domain Isolation:** Decoupled Dev and Prod directory trees (`domains/dev/*` and `domains/prod/*`) with dedicated GCS state file prefixes.
 * **FinOps Governance:** Mandatory resource labeling (`cost_center`, `data_sensitivity`, `is_temp_sandbox`) enforced at the module layer.
-* **Automated CI/CD Validation:** GitHub Actions automatically checks HCL formatting, initializes providers, and validates syntax on every code push or Pull Request.
+* **Matrix-Based CI/CD Engine:** GitHub Actions automatically checks HCL formatting, initializes providers, and validates syntax in parallel on every code push or Pull Request.
 * **Remote State Locking:** Zero risk of state corruption using Google Cloud Storage (GCS) with object versioning enabled.
 
 ---
@@ -31,14 +32,16 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
                                  (git push / PR)
                                           v
                      +------------------------------------------+
-                     |    GitHub Actions CI/CD Validation      |
+                     |  GitHub Actions Parallel Matrix Engine   |
+                     |  [dev/marketing]   [dev/sales]           |
+                     |  [prod/marketing]  [prod/sales]          |
                      |  (fmt check -> init -> validate)         |
                      +------------------------------------------+
                                           |
                                           v
   +-------------------------------------------------------------------------------+
   |                                  Local Workstation                            |
-  |   cd domains/h1_gci_marketing                                                 |
+  |   cd domains/dev/h1_gci_marketing (or sales / prod)                           |                      
   |   terraform init -> terraform plan -> terraform apply                         |
   +-------------------------------------------------------------------------------+
                                  |                    |
@@ -47,17 +50,18 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 +------------------------------------------+   +--------------------------------------+
 |       Google Cloud Storage (GCS)         |   |         Google Cloud Platform        |
 |  gs://gcp-terraform-tmp-tfstate-prasanna |   |          Project: gcp-terraform-tmp  |
-|  Prefix: domains/h1_gci_marketing        |   |  - Dataset: raw_gci_marketing_prod   |
-+------------------------------------------+   |  - IAM: airflow-platform-worker      |
-                                               |  - FinOps: Labels & Governance       |
-                                               +--------------------------------------+
+|  Prefix: domains/dev/h1_gci_marketing    |   |  - Datasets: dev_raw_* & prod_raw_*  |
+|  Prefix: domains/prod/h1_gci_sales       |   |  - IAM: airflow-platform-worker      |
+|  (Object Versioning Enabled)             |   |  - FinOps: Labels & Governance       |
++------------------------------------------+   +--------------------------------------+
 ```
 
 ### Key Architectural Decisions
 
 1. **Modular Engine over Monolithic Code:**
-   * Infrastructure code is separated into reusable blueprints (`modules/`) and domain orchestrators (`domains/`).
+   * Infrastructure code is separated into reusable blueprints (`modules/`) and domain orchestrators (`domains/dev/` and `domains/prod/`).
    * A change to the Marketing domain cannot accidentally alter or destroy Sales domain resources.
+   * Deploying or breaking changes in `dev` cannot accidentally alter or destroy `prod` resources or state files.
 
 2. **Backend Authentication Bypass in CI (`-backend=false`):**
    * Static CI checks (`terraform fmt` and `terraform validate`) run inside GitHub Actions without needing live GCP credentials.
@@ -81,8 +85,16 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 │       ├── variables.tf              # Input variable definitions & validation rules
 │       └── outputs.tf                # Module outputs (dataset ID, references, self-link)
 ├── domains/
-│   └── h1_gci_marketing/             # Domain implementation (Marketing Landing Zone)
-│       └── main.tf                   # Instantiates data_platform_bigquery with GCS backend
+│   ├── dev/                          # Development Environment Domain Orchestrators
+│   │   ├── h1_gci_marketing/
+│   │   │   └── main.tf               # Dev Marketing dataset landing zone
+│   │   └── h1_gci_sales/
+│   │       └── main.tf               # Dev Sales dataset landing zone
+│   └── prod/                         # Production Environment Domain Orchestrators
+│       ├── h1_gci_marketing/
+│       │   └── main.tf               # Prod Marketing dataset landing zone
+│       └── h1_gci_sales/
+│           └── main.tf               # Prod Sales dataset landing zone
 ├── .gitignore                        # Standard Terraform & local state exclusion rules
 ├── HANDBOOK.md                       # Comprehensive operational handbook & CLI reference
 └── README.md                         # Repository documentation (this file)
@@ -93,7 +105,7 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 | Directory Level | Purpose | Example Responsibilities |
 | :--- | :--- | :--- |
 | **`modules/`** | **Blueprint Layer** | Defines *how* resources are constructed. Enforces mandatory input variables, default labels, and IAM access rules. Contains no hardcoded project IDs or environment names. |
-| **`domains/`** | **Instantiation Layer** | Defines *what* is actually deployed. Passes domain-specific parameters (e.g., `cost_center = "gci_marketing_emea"`) into the module and connects to the GCS remote state backend. |
+| **`domains/dev/ & domains/prod/`** | **Instantiation Layer** | Defines what is actually deployed per environment. Passes environment parameters (e.g., environment = "dev") into the module and connects to dedicated GCS remote state paths. |
 
 ---
 
@@ -104,7 +116,7 @@ This module enforces enterprise standards across every BigQuery dataset created 
 ### Input Variables (`variables.tf`)
 
 * **`project_id`** *(String, Required)*: The target GCP Project ID (e.g., `gcp-terraform-tmp`).
-* **`dataset_id`** *(String, Required)*: Unique identifier for the dataset (e.g., `raw_gci_marketing_prod`).
+* **`dataset_id`** *(String, Required)*: Unique identifier for the dataset (e.g., `dev_raw_gci_marketing_prod`).
 * **`location`** *(String, Optional)*: BigQuery dataset region. Defaults to `"EU"`.
 * **`cost_center`** *(String, Required)*: FinOps cost tracking label (e.g., `"gci_marketing_emea"`).
 * **`data_sensitivity`** *(String, Required)*: Data classification tag (`"public"`, `"internal"`, `"pii"`, `"confidential"`).
@@ -162,7 +174,7 @@ terraform {
 
   backend "gcs" {
     bucket = "gcp-terraform-tmp-tfstate-prasanna"
-    prefix = "domains/h1_gci_marketing"
+    prefix = "domains/dev/h1_gci_marketing"
   }
 }
 
@@ -171,10 +183,10 @@ provider "google" {
 }
 
 module "gci_marketing_landing_zone" {
-  source = "../../modules/data_platform_bigquery"
+  source = "../../../modules/data_platform_bigquery"
 
   project_id       = "gcp-terraform-tmp"
-  dataset_id       = "raw_gci_marketing_prod"
+  dataset_id       = "dev_raw_gci_marketing"
   location         = "EU"
   cost_center      = "gci_marketing_emea"
   data_sensitivity = "pii"
@@ -207,7 +219,7 @@ Recovery Security: Object Versioning enabled for state history rollback.
 
 ``data_sensitivity:`` Governs compliance and security scanning (pii, internal, confidential).
 
-``environment:`` Automatically set to ``"sandbox"`` or ``"production"`` based on module parameters.
+``environment:`` Automatically set to ``"dev|sandbox"`` or ``"prod|sandbox"`` based on module parameters.
 
 ## ⚙️ CI/CD Pipeline & GitHub Actions Automation
 
@@ -234,28 +246,35 @@ on:
 
 jobs:
   terraform-validate:
-    name: 'Terraform Validation & Formatting'
+    name: 'Validate (${{ matrix.domain }})'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        domain:
+          - 'domains/dev/h1_gci_marketing'
+          - 'domains/dev/h1_gci_sales'
+          - 'domains/prod/h1_gci_marketing'
+          - 'domains/prod/h1_gci_sales'
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.16.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.2
 
-    - name: Terraform Format Check
-      run: terraform fmt -check -recursive
+      - name: Check Formatting
+        run: terraform fmt -check -recursive
 
-    - name: Terraform Init
-      run: terraform init -backend=false
-      working-directory: ./domains/h1_gci_marketing
+      - name: Initialize Domain
+        run: terraform init -backend=false
+        working-directory: ./${{ matrix.domain }}
 
-    - name: Terraform Validate
-      run: terraform validate
-      working-directory: ./domains/h1_gci_marketing
+      - name: Validate Domain Syntax
+        run: terraform validate
+        working-directory: ./${{ matrix.domain }}
 ```
 ---
 
@@ -279,11 +298,30 @@ cd "C:\Users\prasa\Root\Terraform Infrastructure"
 terraform fmt -recursive
 ```
 
-**3. Initialize & Deploy Domain**
+**3A. Initialize & Deploy Domain - Dev Environment**
 
 ```
 # Navigate into target domain directory
-cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\h1_gci_marketing"
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_marketing"
+
+# Initialize remote GCS backend & download providers
+terraform init
+
+# Validate configuration syntax
+terraform validate
+
+# Execution Dry-Run
+terraform plan
+
+# Apply changes to GCP
+terraform apply
+```
+
+**3B. Initialize & Deploy Domain - Prod Environment**
+
+```
+# Navigate into target domain directory
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\prod\h1_gci_marketing"
 
 # Initialize remote GCS backend & download providers
 terraform init
