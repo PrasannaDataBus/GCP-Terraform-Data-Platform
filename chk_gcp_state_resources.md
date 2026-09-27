@@ -52,14 +52,17 @@ gcloud storage ls --recursive gs://gcp-terraform-tmp-tfstate-prasanna/
 ```
 
 ```
-gs://gcp-terraform-tmp-tfstate-prasanna/domains/h1_gci_marketing/default.tfstate
+gs://gcp-terraform-tmp-tfstate-prasanna/domains/dev/h1_gci_marketing/default.tfstate
+gs://gcp-terraform-tmp-tfstate-prasanna/domains/dev/h1_gci_sales/default.tfstate
+gs://gcp-terraform-tmp-tfstate-prasanna/domains/prod/h1_gci_marketing/default.tfstate
+gs://gcp-terraform-tmp-tfstate-prasanna/domains/prod/h1_gci_sales/default.tfstate
 ```
 
 **4. Inspect State File Storage Footprint (Cost Check)**
 
 
 ```
-gcloud storage ls --long gs://gcp-terraform-tmp-tfstate-prasanna/domains/h1_gci_marketing/default.tfstate
+gcloud storage ls --long gs://gcp-terraform-tmp-tfstate-prasanna/domains/dev/h1_gci_marketing/default.tfstate
 ```
 
 ``` > Expected Footprint: ~3 KB to 5 KB (Under GCP 5 GB Free Tier = $0.00).```
@@ -76,12 +79,12 @@ Verify that BigQuery datasets provisioned via Terraform contain mandatory FinOps
 
 **2. Inspect Dataset Metadata & FinOps Labels**
 
-```bq show --format=prettyjson gcp-terraform-tmp:raw_gci_marketing_prod```
+```bq show --format=prettyjson gcp-terraform-tmp:dev_raw_gci_marketing```
 
 
 > Verification Key-Values to Confirm in Output:
 
-> * "datasetReference.datasetId": "raw_gci_marketing_prod"
+> * "datasetReference.datasetId": "dev_raw_gci_marketing"
 
 > * "location": "EU"
 
@@ -89,7 +92,7 @@ Verify that BigQuery datasets provisioned via Terraform contain mandatory FinOps
 
 > * "labels.data_sensitivity": "pii"
 
-> * "labels.environment": "production"
+> * "labels.environment": "sandbox"
 
 > * "labels.managed_by": "terraform"
 
@@ -102,20 +105,20 @@ Audit the service accounts and permissions granted at the dataset level.
 **1. View Access Policy Bindings on Dataset**
 
 ```
-bq show --format=prettyjson gcp-terraform-tmp:raw_gci_marketing_prod | Select-String -Pattern "access" -Context 0,20
+bq show --format=prettyjson gcp-terraform-tmp:dev_raw_gci_marketing | Select-String -Pattern "access" -Context 0,20
 ```
 
 ```Expected Role: roles/bigquery.dataEditor bound to serviceAccount:airflow-platform-worker@gcp-terraform-tmp.iam.gserviceaccount.com```
 
 ## 💰 Section 5: Real-Time FinOps Cost Assessment
 
-| Infrastructure Component | Provisioned Resource | Live Size / Count | Monthly Cost | Cost Justification |
-| :--- | :--- | :--- | :--- | :--- |
+| Infrastructure Component | Provisioned Resource                      | Live Size / Count | Monthly Cost | Cost Justification |
+| :--- |:------------------------------------------| :--- | :--- | :--- |
 | **State Storage** | `gs://gcp-terraform-tmp-tfstate-prasanna` | ~3.5 KB | **$0.00** | Covered under GCP 5 GB Free Tier |
-| **BigQuery Dataset** | `raw_gci_marketing_prod` | 0 Bytes | **$0.00** | Datasets & metadata carry $0 fee; active storage <10 GB is free |
-| **IAM Access Policy** | BigQuery Data Editor Binding | 1 Role Binding | **$0.00** | IAM metadata carries $0 fee |
-| **CI/CD Pipeline** | GitHub Actions (`terraform-ci.yml`) | ~5 Runs | **$0.00** | Covered under GitHub 2,000 free runner minutes/month |
-| **Total Monthly Spend** | — | — | **$0.00 / month** | **100% Free Sandbox** |
+| **BigQuery Dataset** | `dev_raw_gci_marketing`                   | 0 Bytes | **$0.00** | Datasets & metadata carry $0 fee; active storage <10 GB is free |
+| **IAM Access Policy** | BigQuery Data Editor Binding              | 1 Role Binding | **$0.00** | IAM metadata carries $0 fee |
+| **CI/CD Pipeline** | GitHub Actions (`terraform-ci.yml`)       | ~5 Runs | **$0.00** | Covered under GitHub 2,000 free runner minutes/month |
+| **Total Monthly Spend** | —                                         | — | **$0.00 / month** | **100% Free Sandbox** |
 
 ## ⚡ Section 6: Automated Terminal One-Liner Audit Script
 
@@ -133,7 +136,7 @@ Write-Host "`n[2/3] Checking Remote State Objects..." -ForegroundColor Yellow
 gcloud storage ls --recursive gs://gcp-terraform-tmp-tfstate-prasanna/
 
 Write-Host "`n[3/3] Checking BigQuery Dataset Labels..." -ForegroundColor Yellow
-bq show --format=prettyjson gcp-terraform-tmp:raw_gci_marketing_prod | Select-String -Pattern "labels" -Context 0,6
+bq show --format=prettyjson gcp-terraform-tmp:dev_raw_gci_marketing | Select-String -Pattern "labels" -Context 0,6
 
 Write-Host "`n✅ Platform Health Audit Complete - Infrastructure Verified Healthy ($0.00 Spend)." -ForegroundColor Green
 ```
