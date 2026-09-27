@@ -14,7 +14,7 @@ resource "google_bigquery_dataset" "domain_dataset" {
     managed_by       = "terraform-platform-engine"
     cost_center      = var.cost_center
     data_sensitivity = var.data_sensitivity
-    environment      = var.is_temp_sandbox ? "sandbox" : "production"
+    environment      = var.environment
   }
 }
 
