@@ -27,7 +27,7 @@ variable "data_sensitivity" {
 
   # PLATFORM GUARDRAIL: Terraform will fail if the domain engineer types a wrong value
   validation {
-    condition     = contains(["public", "internal", "pii", "financial"], var.data_sensitivity)
+    condition     = contains(["public", "internal", "pii", "financial", "confidential"], var.data_sensitivity)
     error_message = "Data sensitivity must be exactly: public, internal, pii, or financial."
   }
 }
@@ -42,4 +42,15 @@ variable "dataset_editors" {
   description = "List of IAM service accounts or groups that need Editor access."
   type        = list(string)
   default     = []
+}
+
+variable "environment" {
+  type        = string
+  description = "Target environment (e.g. dev, staging, production)"
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "staging", "production"], var.environment)
+    error_message = "Environment must be one of: dev, staging, production."
+  }
 }
