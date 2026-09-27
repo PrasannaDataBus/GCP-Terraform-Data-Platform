@@ -7,7 +7,9 @@
 # - Root Directory: C:\U\xxx\yyy\Terraform Infrastructure
 # - Sandbox Project: gcp-terraform-tmp | Region: EU
 # - Reusable Module: modules/data_platform_bigquery (Handles dataset, IAM, & FinOps labels)
-# - Domain Configuration: domains/h1_gci_marketing (Implements raw_gci_marketing_prod)
+# Domain Layout:
+#     - Dev:  domains/dev/h1_gci_marketing & domains/dev/h1_gci_sales
+#     - Prod: domains/prod/h1_gci_marketing & domains/prod/h1_gci_sales
 # - Remote State: GCS Bucket (gs://gcp-terraform-tmp-tfstate-prasanna)
 # - CI/CD: GitHub Actions (.github/workflows/terraform-ci.yml)
 #
@@ -36,8 +38,13 @@
 # Project Root Navigation
 cd "C:\Users\prasa\Root\Terraform Infrastructure"
 
-# Specific Domain Navigation (Where main.tf execution lives)
-cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\h1_gci_marketing"
+# Dev Environment Domains
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_marketing"
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_sales"
+
+# Prod Environment Domains
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\prod\h1_gci_marketing"
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\prod\h1_gci_sales"
 
 
 # ==================================================================================================
@@ -103,22 +110,23 @@ gcloud storage buckets update gs://gcp-terraform-tmp-tfstate-prasanna --versioni
 # --------------------------------------------------------------------------------------------------
 # ✅ What It Does:
 #    Transfers existing infrastructure tracking (e.g., BigQuery dataset) from local hard drive to GCS.
+#    Migrates local 'terraform.tfstate' files to isolated GCS bucket sub-paths.
 #
 # 📅 When to Use:
 #    - Right after adding the 'backend "gcs"' block to domain main.tf.
 # ==================================================================================================
 
-# Step 1: Ensure backend block exists in domains/h1_gci_marketing/main.tf:
+# Step 1: Ensure backend block in main.tf matches environment path:
 # terraform {
 #   backend "gcs" {
 #     bucket = "gcp-terraform-tmp-tfstate-prasanna"
-#     prefix = "domains/h1_gci_marketing"
+#     prefix = "domains/dev/h1_gci_marketing"  # or prod/..., dev/h1_gci_sales
 #   }
 # }
 
-# Step 2: Run Init from Domain Directory
-cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\h1_gci_marketing"
-terraform init
+# Step 2: Migrate state safely to GCS
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_marketing"
+terraform init -migrate-state
 
 # Step 3: When prompted: "Do you want to copy existing state to the new backend?"
 # Type: yes
@@ -138,8 +146,8 @@ terraform init
 cd "C:\Users\prasa\Root\Terraform Infrastructure"
 terraform fmt -recursive
 
-# 2. Navigate to Domain Directory
-cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\h1_gci_marketing"
+# 2. Navigate to Domain Directory (Example: Dev Marketing)
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_marketing"
 
 # 3. Initialize Domain (Downloads modules and provider plugins)
 terraform init
@@ -150,8 +158,11 @@ terraform validate
 # 5. Preview Changes (Dry-Run)
 terraform plan
 
-# 6. Deploy Changes to Google Cloud
+# 6a. Deploy Changes to Google Cloud
 terraform apply
+
+# 6b. Deploy Changes to Google Cloud
+terraform apply -auto-approve
 
 # ==================================================================================================
 # 🌿 Section 5B: Feature Branching & Pull Request (PR) Workflow
@@ -168,7 +179,7 @@ terraform apply
 git checkout -b feature/add-sales-domain
 
 # 2. Append test comment or make module updates
-Add-Content domains/h1_gci_marketing/main.tf "`n# Domain update check"
+Add-Content domains/dev/h1_gci_marketing/main.tf "`n# Domain update check"
 
 # 3. Stage, commit, and push upstream
 git add .
@@ -193,7 +204,7 @@ git pull origin master
 #    This permanently deletes BigQuery datasets, tables, and IAM bindings!
 # ==================================================================================================
 
-cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\h1_gci_marketing"
+cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_marketing"
 
 # Preview resources scheduled for destruction
 terraform plan -destroy
@@ -211,8 +222,9 @@ terraform destroy
 # 2. Branch Matching: Triggers on both 'main' and 'master' branches.
 # 3. Path Filtering: Only triggers if files under 'modules/**', 'domains/**', or '.github/workflows/**' change.
 # 4. Backend Authentication Bypass: Must use 'terraform init -backend=false' during automated CI check.
-#    (Reason: CI runners lack GCP service account keys for state bucket access during syntax validation).
-# 5. Action Versions: Uses actions/checkout@v4 and hashicorp/setup-terraform@v3 to avoid Node.js deprecations.
+# 5. Action Versions: Uses actions/checkout@v4 and hashicorp/setup-terraform@v3.
+# 6. Matrix Execution: Evaluates dev/marketing, dev/sales, prod/marketing, prod/sales in parallel.
+# 7. Formatting Guardrail: Runs 'terraform fmt -check -recursive' globally across all directories.
 # ==================================================================================================
 
 
@@ -228,6 +240,10 @@ terraform destroy
 # YAML Syntax Error in Workflow      | Incorrect indentation under 'on:'       | Keep 'push:' and 'pull_request:' at same indent level
 # CI Failure: Storage Backend Auth   | Runner trying to access GCS without key | Add '-backend=false' to 'terraform init' in YAML
 # Node.js 20 Deprecation Warning     | Legacy GitHub Actions versions used     | Upgrade workflow to checkout@v4 & setup-terraform@v3
+# No such file or directory in CI    | Hardcoded working directory path moved | Implement matrix strategy targeting dev/ & prod/ paths
+# terraform.tfstate visible locally  | Backend not initialized or unmigrated  | Run 'terraform init -migrate-state' or delete local file
+# Bucket folder missing in GCS UI    | GCS creates folders on first file save  | Run 'terraform apply' to push state file to bucket path
+# CI Storage Backend Auth Error      | Runner trying to access GCS without key | Add '-backend=false' to 'terraform init' in YAML
 # ==================================================================================================
 
 
@@ -237,20 +253,23 @@ terraform destroy
 # 1. Open PowerShell Terminal at Root:
 #    > cd "C:\Users\prasa\Root\Terraform Infrastructure"
 #
-# 2. Make code adjustments in PyCharm (modules/ or domains/).
+# 2. Make code adjustments in PyCharm (Dev environment first!).
 #
 # 3. Format all code cleanly:
 #    > terraform fmt -recursive
 #
-# 4. Test locally in domain folder:
-#    > cd domains/h1_gci_marketing
+# 4. Test locally in Dev environment folder:
+#    > cd domains/dev/h1_gci_marketing
 #    > terraform validate
 #    > terraform plan
+#    > terraform apply
 #
 # 5. Commit using standardized version format:
 #    > git add .
 #    > git commit -m "V1.0.X — [Domain/Module] / [Task Description]"
 #    > git push origin master
 #
-# 6. Verify automated green checkmark in GitHub Actions tab.
+# 6. Verify automated green checkmark in GitHub Actions tab across all 4 matrix jobs.
+#
+# 7. Promote and deploy working code to Production (`domains/prod/...`).
 # ==================================================================================================
