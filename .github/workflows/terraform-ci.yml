@@ -20,8 +20,17 @@ on:
 
 jobs:
   terraform-validate:
-    name: 'Terraform Validation & Formatting'
+    name: 'Terraform Validation'
     runs-on: ubuntu-latest
+
+    # DYNAMIC MATRIX: Runs parallel jobs for each directory
+    strategy:
+      matrix:
+        target_dir:
+          - dev/h1_gci_marketing
+          - dev/h1_gci_sales
+          - prod/h1_gci_marketing
+          - prod/h1_gci_sales
 
     steps:
     - name: Checkout Code
@@ -32,13 +41,16 @@ jobs:
       with:
         terraform_version: 1.16.2
 
+    # Formatting is checked globally across the repo
     - name: Terraform Format Check
       run: terraform fmt -check -recursive
 
+    # Init uses the dynamic matrix path
     - name: Terraform Init
       run: terraform init -backend=false
-      working-directory: ./domains/h1_gci_marketing
+      working-directory: ./domains/${{ matrix.target_dir }}
 
+    # Validate uses the dynamic matrix path
     - name: Terraform Validate
       run: terraform validate
-      working-directory: ./domains/h1_gci_marketing
+      working-directory: ./domains/${{ matrix.target_dir }}
