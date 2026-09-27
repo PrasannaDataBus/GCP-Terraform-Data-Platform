@@ -11,7 +11,7 @@ terraform {
 
   backend "gcs" {
     bucket = "gcp-terraform-tmp-tfstate-prasanna"
-    prefix = "domains/h1_gci_marketing"
+    prefix = "domains/dev/h1_gci_marketing"
   }
 }
 
@@ -20,16 +20,17 @@ provider "google" {
 }
 
 module "gci_marketing_landing_zone" {
-  source = "../../modules/data_platform_bigquery"
+  source = "../../../modules/data_platform_bigquery"
 
   # REPLACE WITH YOUR ACTUAL GCP PROJECT ID
   project_id = "gcp-terraform-tmp"
-  dataset_id = "raw_gci_marketing_prod"
+  dataset_id = "dev_raw_gci_marketing"
 
   # FinOps & Governance inputs required by your platform rules
   cost_center      = "gci_marketing_emea"
   data_sensitivity = "pii"
-  is_temp_sandbox  = false
+  environment      = "dev"
+  is_temp_sandbox  = true
 
   # Automatically grants Airflow or dbt service accounts access
   dataset_editors = [
