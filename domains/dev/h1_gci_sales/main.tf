@@ -6,8 +6,6 @@ terraform {
       version = "~> 8.4.0"
     }
   }
-
-  # STATE ISOLATION: Unique GCS prefix for the Sales Domain
   backend "gcs" {
     bucket = "gcp-terraform-tmp-tfstate-prasanna"
     prefix = "domains/dev/h1_gci_sales"
@@ -20,18 +18,17 @@ provider "google" {
 }
 
 variable "project_id" {
-  type        = string
-  description = "GCP Project ID"
-  default     = "gcp-terraform-tmp"
+  type    = string
+  default = "gcp-terraform-tmp"
 }
 
 variable "location" {
-  type        = string
-  description = "GCP Deployment Region"
-  default     = "EU"
+  type    = string
+  default = "EU"
 }
 
-# REUSING THE PLATFORM MODULE
+# BRONZE (RAW) ZONE - Airflow Writes, dbt Reads
+
 module "sales_landing_zone" {
   source = "../../../modules/data_platform_bigquery"
 
@@ -46,10 +43,33 @@ module "sales_landing_zone" {
   dataset_editors = [
     "serviceAccount:airflow-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
+  dataset_viewers = [
+    "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+  ]
 }
 
-# Outputs
-output "sales_dataset_id" {
-  value       = module.sales_landing_zone.dataset_id
-  description = "Provisioned Sales BigQuery Dataset ID"
+# SILVER ZONE - dbt Transforms & Writes
+
+module "sales_silver_zone" {
+  source = "../../../modules/data_platform_bigquery"
+
+  project_id       = var.project_id
+  dataset_id       = "dev_silver_sales_emea"
+  location         = var.location
+  cost_center      = "sales_emea_retail"
+  data_sensitivity = "confidential"
+  environment      = "dev"
+  is_temp_sandbox  = true
+
+  dataset_editors = [
+    "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+  ]
+}
+
+output "sales_raw_dataset_id" {
+  value = module.sales_landing_zone.dataset_id
+}
+
+output "sales_silver_dataset_id" {
+  value = module.sales_silver_zone.dataset_id
 }
