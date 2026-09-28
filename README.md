@@ -47,13 +47,13 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
                                  |                    |
         (Reads/Writes State)     |                    | (Provisions Resources)
                                  v                    v
-+------------------------------------------+   +--------------------------------------+
-|       Google Cloud Storage (GCS)         |   |         Google Cloud Platform        |
-|  gs://gcp-terraform-tmp-tfstate-prasanna |   |          Project: gcp-terraform-tmp  |
-|  Prefix: domains/dev/h1_gci_marketing    |   |  - Datasets: dev_raw_* & prod_raw_*  |
-|  Prefix: domains/prod/h1_gci_sales       |   |  - IAM: airflow-platform-worker      |
-|  (Object Versioning Enabled)             |   |  - FinOps: Labels & Governance       |
-+------------------------------------------+   +--------------------------------------+
++------------------------------------------+   +---------------------------------------------+
+|       Google Cloud Storage (GCS)         |   |         Google Cloud Platform               |
+|  gs://gcp-terraform-tmp-tfstate-prasanna |   |          Project: gcp-terraform-tmp         |
+|  Prefix: domains/dev/h1_gci_marketing    |   |  - Datasets: dev_raw_* & prod_raw_*         |
+|  Prefix: domains/prod/h1_gci_sales       |   |  - IAM: airflow-dev-worker & dbt-dev-worker |
+|  (Object Versioning Enabled)             |   |  - FinOps: Labels & Governance              |
++------------------------------------------+   +---------------------------------------------+
 ```
 
 ### Key Architectural Decisions
@@ -86,15 +86,17 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 │       └── outputs.tf                # Module outputs (dataset ID, references, self-link)
 ├── domains/
 │   ├── dev/                          # Development Environment Domain Orchestrators
+│   │   ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
 │   │   ├── h1_gci_marketing/
-│   │   │   └── main.tf               # Dev Marketing dataset landing zone
+│   │   │   └── main.tf               # Dev Marketing Medallion (Raw & Silver) zones
 │   │   └── h1_gci_sales/
-│   │       └── main.tf               # Dev Sales dataset landing zone
+│   │       └── main.tf               # Dev Sales Medallion (Raw & Silver) zones
 │   └── prod/                         # Production Environment Domain Orchestrators
+│       ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
 │       ├── h1_gci_marketing/
-│       │   └── main.tf               # Prod Marketing dataset landing zone
+│       │   └── main.tf               # Prod Marketing Medallion (Raw & Silver) zones
 │       └── h1_gci_sales/
-│           └── main.tf               # Prod Sales dataset landing zone
+│           └── main.tf               # Prod Sales Medallion (Raw & Silver) zones
 ├── .gitignore                        # Standard Terraform & local state exclusion rules
 ├── HANDBOOK.md                       # Comprehensive operational handbook & CLI reference
 └── README.md                         # Repository documentation (this file)
@@ -122,6 +124,7 @@ This module enforces enterprise standards across every BigQuery dataset created 
 * **`data_sensitivity`** *(String, Required)*: Data classification tag (`"public"`, `"internal"`, `"pii"`, `"confidential"`).
 * **`is_temp_sandbox`** *(Bool, Required)*: Sandbox flag. If `true`, applies an automatic 30-day table expiration policy.
 * **`dataset_editors`** *(List of Strings, Optional)*: Service accounts or users granted `roles/bigquery.dataEditor`.
+* **`dataset_viewers`** *(List of Strings, Optional)*: Downstream consumers (like dbt) granted `roles/bigquery.dataViewer` for read-only Medallion Architecture access.
 
 ### Module Logic (`main.tf`)
 
@@ -182,9 +185,9 @@ provider "google" {
   # Connection settings inherited from environment or gcloud context
 }
 
+# BRONZE (RAW) ZONE - Airflow Writes, dbt Reads
 module "gci_marketing_landing_zone" {
-  source = "../../../modules/data_platform_bigquery"
-
+  source           = "../../../modules/data_platform_bigquery"
   project_id       = "gcp-terraform-tmp"
   dataset_id       = "dev_raw_gci_marketing"
   location         = "EU"
@@ -193,7 +196,25 @@ module "gci_marketing_landing_zone" {
   is_temp_sandbox  = false
 
   dataset_editors = [
-    "serviceAccount:airflow-platform-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+    "serviceAccount:airflow-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+  ]
+  dataset_viewers = [
+    "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+  ]
+}
+
+# SILVER ZONE - dbt Transforms & Writes
+module "gci_marketing_silver_zone" {
+  source           = "../../../modules/data_platform_bigquery"
+  project_id       = "gcp-terraform-tmp"
+  dataset_id       = "dev_silver_gci_marketing"
+  location         = "EU"
+  cost_center      = "gci_marketing_emea"
+  data_sensitivity = "pii"
+  is_temp_sandbox  = false
+
+  dataset_editors = [
+    "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
 }
 ```
@@ -251,8 +272,10 @@ jobs:
     strategy:
       matrix:
         domain:
+          - 'domains/dev/h0_core_iam'
           - 'domains/dev/h1_gci_marketing'
           - 'domains/dev/h1_gci_sales'
+          - 'domains/prod/h0_core_iam'
           - 'domains/prod/h1_gci_marketing'
           - 'domains/prod/h1_gci_sales'
 
@@ -364,7 +387,7 @@ How does Terraform architecture support FinOps and Cost Optimization?
 
 **1. Principle of Least Privilege:**
 
-Infrastructure access is granted via dedicated IAM bindings ```(roles/bigquery.dataEditor)``` targeted exclusively at workload service accounts ```(e.g., airflow-platform-worker)```.
+Infrastructure access is granted via dedicated IAM bindings ```(roles/bigquery.dataEditor)``` targeted exclusively at workload service accounts ```(e.g., airflow-dev-worker and dbt-dev-worker)```.
 
 **2. Secret Management:**
 
