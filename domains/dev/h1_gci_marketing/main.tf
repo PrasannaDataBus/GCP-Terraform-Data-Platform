@@ -34,6 +34,6 @@ module "gci_marketing_landing_zone" {
 
   # Automatically grants Airflow or dbt service accounts access
   dataset_editors = [
-    "serviceAccount:airflow-platform-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+    "serviceAccount:airflow-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
 }
