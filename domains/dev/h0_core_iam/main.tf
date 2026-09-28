@@ -36,3 +36,23 @@ resource "google_project_iam_member" "airflow_dev_bq_job_user" {
 output "airflow_dev_sa_email" {
   value = google_service_account.airflow_dev_worker.email
 }
+
+# DBT WORKER IDENTITY
+
+# Provision the isolated Service Account for local dbt
+resource "google_service_account" "dbt_dev_worker" {
+  account_id   = "dbt-dev-worker"
+  display_name = "dbt Dev Transformation Worker"
+  description  = "Used by local dbt to read raw datasets and materialize refined datasets"
+}
+
+# Grant Job User role at the project level so dbt can execute SQL compute jobs
+resource "google_project_iam_member" "dbt_dev_bq_job_user" {
+  project = "gcp-terraform-tmp"
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.dbt_dev_worker.email}"
+}
+
+output "dbt_dev_sa_email" {
+  value = google_service_account.dbt_dev_worker.email
+}
