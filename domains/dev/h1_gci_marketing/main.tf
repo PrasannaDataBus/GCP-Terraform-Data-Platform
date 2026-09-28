@@ -1,5 +1,3 @@
-# Trigger CI/CD execution pipeline
-
 terraform {
   required_version = ">= 1.0.0"
   required_providers {
@@ -8,32 +6,47 @@ terraform {
       version = "~> 8.4.0"
     }
   }
-
   backend "gcs" {
     bucket = "gcp-terraform-tmp-tfstate-prasanna"
     prefix = "domains/dev/h1_gci_marketing"
   }
 }
 
-provider "google" {
-  # Initializes GCP connection
-}
+provider "google" {}
+
+# BRONZE (RAW) ZONE - Airflow Writes, dbt Reads
 
 module "gci_marketing_landing_zone" {
   source = "../../../modules/data_platform_bigquery"
 
-  # REPLACE WITH YOUR ACTUAL GCP PROJECT ID
-  project_id = "gcp-terraform-tmp"
-  dataset_id = "dev_raw_gci_marketing"
-
-  # FinOps & Governance inputs required by your platform rules
+  project_id       = "gcp-terraform-tmp"
+  dataset_id       = "dev_raw_gci_marketing"
   cost_center      = "gci_marketing_emea"
   data_sensitivity = "pii"
   environment      = "dev"
   is_temp_sandbox  = true
 
-  # Automatically grants Airflow or dbt service accounts access
   dataset_editors = [
     "serviceAccount:airflow-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+  ]
+  dataset_viewers = [
+    "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+  ]
+}
+
+# SILVER ZONE - dbt Transforms & Writes
+
+module "gci_marketing_silver_zone" {
+  source = "../../../modules/data_platform_bigquery"
+
+  project_id       = "gcp-terraform-tmp"
+  dataset_id       = "dev_silver_gci_marketing"
+  cost_center      = "gci_marketing_emea"
+  data_sensitivity = "pii"
+  environment      = "dev"
+  is_temp_sandbox  = true
+
+  dataset_editors = [
+    "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
 }
