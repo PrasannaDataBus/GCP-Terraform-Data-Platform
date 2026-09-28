@@ -44,6 +44,12 @@ variable "dataset_editors" {
   default     = []
 }
 
+variable "dataset_viewers" {
+  type        = list(string)
+  description = "List of IAM members granted roles/bigquery.dataViewer"
+  default     = []
+}
+
 variable "environment" {
   type        = string
   description = "Target environment (e.g. dev, staging, production)"
