@@ -25,6 +25,13 @@ resource "google_service_account" "airflow_dev_worker" {
   description  = "Used by local Airflow-dev Docker to write to Dev BigQuery datasets"
 }
 
+# Grant Job User role at the project level so Airflow can execute queries
+resource "google_project_iam_member" "airflow_dev_bq_job_user" {
+  project = "gcp-terraform-tmp"
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.airflow_dev_worker.email}"
+}
+
 # Output the exact email address so we can use it in our landing zones
 output "airflow_dev_sa_email" {
   value = google_service_account.airflow_dev_worker.email
