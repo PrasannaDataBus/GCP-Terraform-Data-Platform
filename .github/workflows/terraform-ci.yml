@@ -27,10 +27,10 @@ jobs:
     strategy:
       matrix:
         target_dir:
-          - dev/h0_core_iam       # <-- ADDED THIS
+          - dev/h0_core_iam
           - dev/h1_gci_marketing
           - dev/h1_gci_sales
-          - prod/h0_core_iam      # <-- ADDED THIS (for future-proofing)
+          # - prod/h0_core_iam
           - prod/h1_gci_marketing
           - prod/h1_gci_sales
 
