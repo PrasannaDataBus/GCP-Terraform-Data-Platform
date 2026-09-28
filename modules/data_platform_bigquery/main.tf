@@ -28,3 +28,12 @@ resource "google_bigquery_dataset_iam_member" "editor_access" {
   member     = each.value
 }
 
+# AUTOMATED IAM SECURITY: Dynamically grants read-only access for downstream consumers (like dbt)
+resource "google_bigquery_dataset_iam_member" "viewer_access" {
+  for_each = toset(var.dataset_viewers)
+
+  project    = google_bigquery_dataset.domain_dataset.project
+  dataset_id = google_bigquery_dataset.domain_dataset.dataset_id
+  role       = "roles/bigquery.dataViewer"
+  member     = each.value
+}
