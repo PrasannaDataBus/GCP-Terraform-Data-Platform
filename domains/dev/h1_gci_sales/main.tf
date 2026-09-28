@@ -44,7 +44,7 @@ module "sales_landing_zone" {
   is_temp_sandbox  = true
 
   dataset_editors = [
-    "serviceAccount:airflow-platform-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
+    "serviceAccount:airflow-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
 }
 
