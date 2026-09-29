@@ -30,6 +30,7 @@ jobs:
           - dev/h0_core_iam
           - dev/h1_gci_marketing
           - dev/h1_gci_sales
+          - dev/h1_gci_inventory
           # - prod/h0_core_iam
           - prod/h1_gci_marketing
           - prod/h1_gci_sales
