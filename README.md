@@ -19,7 +19,7 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 * **FinOps Governance:** Mandatory resource labeling (`cost_center`, `data_sensitivity`, `is_temp_sandbox`) enforced at the module layer.
 * **Matrix-Based CI/CD Engine:** GitHub Actions automatically checks HCL formatting, initializes providers, and validates syntax in parallel on every code push or Pull Request.
 * **Remote State Locking:** Zero risk of state corruption using Google Cloud Storage (GCS) with object versioning enabled.
-
+* **Automated Scaffolding:** An integrated Cookiecutter templating engine instantly generates standardized Medallion Architecture landing zones, eliminating manual main.tf creation for domains and enforcing consistent module usage across all new domains.
 ---
 
 ## 🧱 Architecture Pattern & Design Decisions
@@ -84,6 +84,12 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 │       ├── main.tf                   # Defines google_bigquery_dataset & IAM resources
 │       ├── variables.tf              # Input variable definitions & validation rules
 │       └── outputs.tf                # Module outputs (dataset ID, references, self-link)
+├── templates/                                # Scaffolding tools for platform automation
+│   └── cookiecutter-gcp-domain-template/     # Jinja-templated engine for new data domains
+│       ├── cookiecutter.json                 # Variables schema prompted to the engineer
+│       └── {{cookiecutter.environment}}/     # Dynamic environment folder[cite: 3]
+│           └── h1_{{cookiecutter.domain_slug}}/ # Dynamic domain folder[cite: 3]
+│               └── main.tf                   # Templated Medallion dataset orchestrator[cite: 3]
 ├── domains/
 │   ├── dev/                          # Development Environment Domain Orchestrators
 │   │   ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
@@ -242,6 +248,19 @@ Recovery Security: Object Versioning enabled for state history rollback.
 
 ``environment:`` Automatically set to ``"dev|sandbox"`` or ``"prod|sandbox"`` based on module parameters.
 
+## 🏗️ Automated Domain Scaffolding (Cookiecutter)
+
+To eliminate manual configuration drift when onboarding new business units, this platform utilizes a localized Cookiecutter template to programmatically generate domain landing zones.
+
+**How to scaffold a new domain:**
+```
+# Navigate to the target environment directory
+cd domains
+
+# Run the Cookiecutter generator
+cookiecutter ../templates/cookiecutter-gcp-domain-template
+```
+
 ## ⚙️ CI/CD Pipeline & GitHub Actions Automation
 
 The CI/CD pipeline defined in ``.github/workflows/terraform-ci.yml`` validates every pull request and push to ``main`` or ``master``.
@@ -275,6 +294,7 @@ jobs:
           - 'domains/dev/h0_core_iam'
           - 'domains/dev/h1_gci_marketing'
           - 'domains/dev/h1_gci_sales'
+          - 'domains/dev/h1_gci_inventory'
           - 'domains/prod/h0_core_iam'
           - 'domains/prod/h1_gci_marketing'
           - 'domains/prod/h1_gci_sales'
