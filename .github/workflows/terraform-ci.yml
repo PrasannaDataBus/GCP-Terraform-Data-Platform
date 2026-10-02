@@ -29,6 +29,7 @@ jobs:
         target_dir:
           - dev/h0_core_iam
           - dev/h1_gci_marketing
+          - dev/h1_gci_customer
           - dev/h1_gci_sales
           - dev/h1_gci_inventory
           # - prod/h0_core_iam
