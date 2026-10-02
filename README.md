@@ -17,7 +17,7 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 * **Domain Isolation:** Separate state prefix isolation per domain to minimize blast radius.
 * **Strict Environment & Domain Isolation:** Decoupled Dev and Prod directory trees (`domains/dev/*` and `domains/prod/*`) with dedicated GCS state file prefixes.
 * **FinOps Governance:** Mandatory resource labeling (`cost_center`, `data_sensitivity`, `is_temp_sandbox`) enforced at the module layer.
-* **Matrix-Based CI/CD Engine:** GitHub Actions automatically checks HCL formatting, initializes providers, and validates syntax in parallel on every code push or Pull Request.
+* **Dynamic Matrix CI/CD Engine:** GitHub Actions automatically discovers new domain folders at runtime and spins up parallel validation tasks (fmt, init, validate) on every code push or Pull Request—scaling the platform infinitely with zero YAML maintenance.
 * **Remote State Locking:** Zero risk of state corruption using Google Cloud Storage (GCS) with object versioning enabled.
 * **Automated Scaffolding:** An integrated Cookiecutter templating engine instantly generates standardized Medallion Architecture landing zones, eliminating manual main.tf creation for domains and enforcing consistent module usage across all new domains.
 * **Real-Time Streaming & Observability-as-a-Service:** Provisions GCP Pub/Sub topics and subscriptions with automated Dead Letter Queues (DLQ) for fault-tolerant event processing and decoupled Dataflow compute identities.
@@ -97,7 +97,12 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 ├── domains/
 │   ├── dev/                          # Development Environment Domain Orchestrators
 │   │   ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
+│   │   │   └── main.tf
 │   │   ├── h1_gci_customer/
+│   │   │   └── main.tf               # Dev Customer Medallion (Raw & Silver) and Streaming zones
+│   │   ├── h1_gci_finance/
+│   │   │   └── main.tf               # Dev Customer Medallion (Raw & Silver) and Streaming zones
+│   │   ├── h1_gci_inventory/
 │   │   │   └── main.tf               # Dev Customer Medallion (Raw & Silver) and Streaming zones
 │   │   ├── h1_gci_marketing/
 │   │   │   └── main.tf               # Dev Marketing Medallion (Raw & Silver) zones
@@ -358,7 +363,9 @@ Supported Options:
 
 The CI/CD pipeline defined in ``.github/workflows/terraform-ci.yml`` validates every pull request and push to ``main`` or ``master``.
 
-### Pipeline Execution Workflow
+To prevent Platform Engineers from becoming a bottleneck, this pipeline uses a **Dynamic Execution Matrix**. Instead of hardcoding domain paths, Job 1 automatically scans the repository at runtime to discover all existing domains. Job 2 then consumes that JSON array to spin up parallel validation tasks instantly.
+
+### Pipeline Execution Workflow (Dynamic Discovery)
 
 ```
 name: Platform Infrastructure CI
@@ -378,20 +385,32 @@ on:
       - '.github/workflows/**'
 
 jobs:
+  # JOB 1: Automatically discover all domain folders
+  setup-matrix:
+    name: 'Discover Domain Folders'
+    runs-on: ubuntu-latest
+    outputs:
+      target_dirs: ${{ steps.set-dirs.outputs.matrix }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Scan directories and output JSON
+        id: set-dirs
+        run: |
+          cd domains
+          DIRS=$(find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | jq -R -s -c 'split("\n")[:-1]')
+          echo "Discovered domains: $DIRS"
+          echo "matrix=$DIRS" >> $GITHUB_OUTPUT
+
+  # JOB 2: Run Terraform commands using the discovered folders
   terraform-validate:
-    name: 'Validate (${{ matrix.domain }})'
+    name: 'Validate (${{ matrix.target_dir }})'
+    needs: setup-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        domain:
-          - 'domains/dev/h0_core_iam'
-          - 'domains/dev/h1_gci_customer'
-          - 'domains/dev/h1_gci_marketing'
-          - 'domains/dev/h1_gci_sales'
-          - 'domains/dev/h1_gci_inventory'
-          - 'domains/prod/h0_core_iam'
-          - 'domains/prod/h1_gci_marketing'
-          - 'domains/prod/h1_gci_sales'
+        target_dir: ${{ fromJson(needs.setup-matrix.outputs.target_dirs) }}
 
     steps:
       - name: Checkout Code
@@ -402,16 +421,16 @@ jobs:
         with:
           terraform_version: 1.16.2
 
-      - name: Check Formatting
+      - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
-      - name: Initialize Domain
+      - name: Terraform Init
         run: terraform init -backend=false
-        working-directory: ./${{ matrix.domain }}
+        working-directory: ./domains/${{ matrix.target_dir }}
 
-      - name: Validate Domain Syntax
+      - name: Terraform Validate
         run: terraform validate
-        working-directory: ./${{ matrix.domain }}
+        working-directory: ./domains/${{ matrix.target_dir }}
 ```
 ---
 
