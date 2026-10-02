@@ -1,15 +1,22 @@
+# This is the name of the workflow that appears in the "Actions" tab in GitHub.
 name: Platform Infrastructure CI
 
+# The 'on' block defines exactly WHEN this pipeline is allowed to run.
 on:
   push:
+    # Triggers automatically when code is merged or pushed directly to these branches.
     branches:
       - main
       - master
+    # Path filtering saves compute costs. The pipeline will ONLY run if files inside
+    # these three specific folders are changed. If you just edit the root README.md,
+    # the pipeline ignores it and stays quiet.
     paths:
       - 'modules/**'
       - 'domains/**'
       - '.github/workflows/**'
   pull_request:
+    # Triggers when an engineer opens a PR asking to merge their branch into main/master.
     branches:
       - main
       - master
@@ -19,42 +26,91 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  terraform-validate:
-    name: 'Terraform Validation'
+  # =========================================================================================
+  # JOB 1: THE SCOUT (setup-matrix)
+  # Its only job is to look inside the 'domains' folder, see what environments exist,
+  # and create a JSON list of them to hand over to Job 2.
+  # =========================================================================================
+  setup-matrix:
+    name: 'Discover Domain Folders'
     runs-on: ubuntu-latest
 
-    # DYNAMIC MATRIX: Runs parallel jobs for each directory
-    strategy:
-      matrix:
-        target_dir:
-          - dev/h0_core_iam
-          - dev/h1_gci_marketing
-          - dev/h1_gci_customer
-          - dev/h1_gci_sales
-          - dev/h1_gci_inventory
-          # - prod/h0_core_iam
-          - prod/h1_gci_marketing
-          - prod/h1_gci_sales
+    # This declares a variable that Job 2 is allowed to read.
+    # We are filling it with the final JSON array created in the 'steps' below.
+    outputs:
+      target_dirs: ${{ steps.set-dirs.outputs.matrix }}
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      # Step 1: Download the repository code onto the GitHub runner (the temporary Linux server).
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.16.2
+      # Step 2: The script that makes this pipeline "Dynamic"
+      - name: Scan directories and output JSON
+        id: set-dirs # We give this step an ID so the 'outputs' block above can reference it.
+        run: |
+          # Move into the domains folder
+          cd domains
+          
+          # This complex Linux command does three things:
+          # 1. 'find . -mindepth 2 -maxdepth 2 -type d' -> Looks exactly two levels deep for folders (e.g., dev/h1_gci_marketing).
+          # 2. 'sed s|^\./||' -> Strips out the annoying "./" at the start of the paths so they look clean.
+          # 3. 'jq' -> Formats the raw text list into a valid JSON array like: ["dev/domain1", "dev/domain2"]
+          DIRS=$(find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | jq -R -s -c 'split("\n")[:-1]')
+          
+          # Prints the list to the GitHub Actions console so you can see it while debugging.
+          echo "Discovered domains: $DIRS"
+          
+          # Saves the JSON array into a special GitHub environment file so Job 2 can grab it.
+          echo "matrix=$DIRS" >> $GITHUB_OUTPUT
 
-    # Formatting is checked globally across the repo
-    - name: Terraform Format Check
-      run: terraform fmt -check -recursive
 
-    # Init uses the dynamic matrix path
-    - name: Terraform Init
-      run: terraform init -backend=false
-      working-directory: ./domains/${{ matrix.target_dir }}
+  # =========================================================================================
+  # JOB 2: THE WORKER (terraform-validate)
+  # This job takes the JSON list from Job 1, clones itself, and runs Terraform
+  # in parallel for every single domain folder discovered.
+  # =========================================================================================
+  terraform-validate:
+    # This dynamic name means the GitHub UI will show parallel jobs named:
+    # "Validate (dev/h1_gci_marketing)", "Validate (prod/h1_gci_sales)", etc.
+    name: 'Validate (${{ matrix.target_dir }})'
 
-    # Validate uses the dynamic matrix path
-    - name: Terraform Validate
-      run: terraform validate
-      working-directory: ./domains/${{ matrix.target_dir }}
+    # CRITICAL: This tells GitHub Actions it MUST wait for Job 1 to finish successfully first.
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+
+    strategy:
+      # This is the handoff. It grabs the JSON array from Job 1 and tells GitHub:
+      # "Spin up a separate, parallel runner for every item in this array."
+      matrix:
+        target_dir: ${{ fromJson(needs.setup-matrix.outputs.target_dirs) }}
+
+    steps:
+      # Step 1: Download the repository code onto this specific parallel runner.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Install the Terraform CLI on the runner so we can execute Terraform commands.
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.2
+
+      # Step 3: Check if the engineer properly formatted their code locally.
+      # This runs globally across the whole repository. If they didn't, the pipeline fails here.
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      # Step 4: Initialize the specific domain.
+      # -backend=false tells Terraform to skip trying to authenticate with the GCP Storage Bucket,
+      # which allows this validation to run securely without needing GCP Service Account keys.
+      - name: Terraform Init
+        run: terraform init -backend=false
+        # working-directory ensures Terraform runs INSIDE the specific domain folder (e.g., domains/dev/h1_gci_marketing)
+        # instead of the root repository folder.
+        working-directory: ./domains/${{ matrix.target_dir }}
+
+      # Step 5: Validate the syntax of the Terraform code for this specific domain.
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./domains/${{ matrix.target_dir }}
