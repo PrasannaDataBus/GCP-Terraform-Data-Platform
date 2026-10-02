@@ -49,3 +49,20 @@ module "{{ cookiecutter.domain_slug }}_silver_zone" {
     "serviceAccount:{{ cookiecutter.dbt_worker_sa }}"
   ]
 }
+
+# STREAMING
+
+{% if cookiecutter.include_realtime_streaming == "yes" %}
+
+# REAL-TIME ZONE - Pub/Sub and Dataflow Streaming (Self-Service)
+
+module "{{ cookiecutter.domain_slug }}_streaming_zone" {
+  source = "../../../modules/data_platform_streaming"
+
+  project_id  = "{{ cookiecutter.gcp_project_id }}"
+  domain_name = "{{ cookiecutter.domain_slug }}"
+  environment = "{{ cookiecutter.environment }}"
+  cost_center = "{{ cookiecutter.cost_center }}"
+  topic_name  = "operational-events"
+}
+{% endif %}
