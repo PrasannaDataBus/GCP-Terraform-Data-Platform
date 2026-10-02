@@ -273,3 +273,42 @@ terraform destroy
 #
 # 7. Promote and deploy working code to Production (`domains/prod/...`).
 # ==================================================================================================
+
+# ==================================================================================================
+# 🏗️ Section 9: Self-Service Domain Scaffolding (Cookiecutter)
+# --------------------------------------------------------------------------------------------------
+# ✅ What It Does:
+#    Automates the creation of new data domain landing zones (BigQuery + Pub/Sub).
+#    Enforces Data Mesh governance, FinOps tagging, and GCP naming conventions by default.
+#
+# 📅 When to Use:
+#    - Onboarding a new business unit (e.g., HR, Customer, Finance) to the Data Mesh.
+#    - Scaffolding standard batch and/or real-time streaming architectures instantly.
+# ==================================================================================================
+
+# 1. Navigate to the project root
+cd "C:\Users\prasa\Root\Terraform Infrastructure"
+
+# 2. Execute the Cookiecutter CLI targeting the domains/ directory
+# The '-o domains/' flag directs the output to the domains folder.
+# The '-f' flag (overwrite-if-exists) safely merges it into the existing dev/ or prod/ folders.
+cookiecutter templates/cookiecutter-gcp-domain-template -o domains/ -f
+
+# 3. Standard CLI Prompts & Explanations:
+# - domain_name:                Business unit name (e.g., GCI Customer, Product Analytics).
+# - domain_slug:                Auto-generates to snake_case (e.g., gci_customer).
+# - environment:                Target environment (e.g., dev, prod).
+# - cost_center:                FinOps allocation (e.g., customer_engineering). Used for billing rollups.
+# - data_sensitivity:           Governance classification (e.g., pii, financial). Enforced by module validation.
+# - is_temp_sandbox:            If 'true', enforces 30-day auto-deletion (cuts legacy compute costs).
+# - include_realtime_streaming: Type 'yes' to provision Pub/Sub, Subscriptions, and Dataflow SAs.
+
+# 4. Platform Guardrails Executed Automatically:
+# - GCP Regex Limits: Automatically sanitizes `domain_slug` underscores to hyphens via Terraform's `replace()` to satisfy the 30-character Service Account limits.
+# - Observability-as-a-Service: Streaming domains automatically spin up a Dead Letter Queue (DLQ).
+# - Zero-Trust IAM: Auto-binds isolated Airflow, dbt, and Dataflow service accounts with least-privilege dataset access.
+
+# 5. Validate the generated architecture
+cd domains/dev/h1_gci_customer
+terraform init -backend=false
+terraform validate
