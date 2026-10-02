@@ -20,6 +20,7 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 * **Matrix-Based CI/CD Engine:** GitHub Actions automatically checks HCL formatting, initializes providers, and validates syntax in parallel on every code push or Pull Request.
 * **Remote State Locking:** Zero risk of state corruption using Google Cloud Storage (GCS) with object versioning enabled.
 * **Automated Scaffolding:** An integrated Cookiecutter templating engine instantly generates standardized Medallion Architecture landing zones, eliminating manual main.tf creation for domains and enforcing consistent module usage across all new domains.
+* **Real-Time Streaming & Observability-as-a-Service:** Provisions GCP Pub/Sub topics and subscriptions with automated Dead Letter Queues (DLQ) for fault-tolerant event processing and decoupled Dataflow compute identities.
 ---
 
 ## 🧱 Architecture Pattern & Design Decisions
@@ -84,6 +85,9 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 │       ├── main.tf                   # Defines google_bigquery_dataset & IAM resources
 │       ├── variables.tf              # Input variable definitions & validation rules
 │       └── outputs.tf                # Module outputs (dataset ID, references, self-link)
+│   └── data_platform_streaming/      # Core reusable module for real-time streaming infrastructure
+│       ├── main.tf                   # Defines Pub/Sub topics, DLQ, and isolated Dataflow IAM
+│       └── variables.tf              # Input variables with GCP regex input sanitization
 ├── templates/                                # Scaffolding tools for platform automation
 │   └── cookiecutter-gcp-domain-template/     # Jinja-templated engine for new data domains
 │       ├── cookiecutter.json                 # Variables schema prompted to the engineer
@@ -93,6 +97,8 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 ├── domains/
 │   ├── dev/                          # Development Environment Domain Orchestrators
 │   │   ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
+│   │   ├── h1_gci_customer/
+│   │   │   └── main.tf               # Dev Customer Medallion (Raw & Silver) and Streaming zones
 │   │   ├── h1_gci_marketing/
 │   │   │   └── main.tf               # Dev Marketing Medallion (Raw & Silver) zones
 │   │   └── h1_gci_sales/
@@ -166,10 +172,78 @@ resource "google_bigquery_dataset_iam_binding" "editors" {
 ```
 ----
 
-## 🌐 Domain Implementation (domains/h1_gci_marketing)
+## ⚡ Reusable Streaming Module Engine (`modules/data_platform_streaming`)
+
+This module provisions real-time event streaming infrastructure while enforcing platform guardrails, Observability-as-a-Service, and FinOps labeling.
+
+### Input Variables (`variables.tf`)
+
+* **`project_id`** *(String, Required)*: The target GCP Project ID.
+* **`domain_name`** *(String, Required)*: Business domain slug (e.g., `"gci_customer"`).
+* **`environment`** *(String, Required)*: Target deployment stage (`"dev"`, `"prod"`).
+* **`cost_center`** *(String, Required)*: Mandatory FinOps cost tracking label (e.g., `"customer_engineering"`).
+* **`topic_name`** *(String, Required)*: Base identifier for the streaming event topic (e.g., `"operational-events"`).
+
+### Module Logic (`main.tf`)
+
+```hcl
+# 1. Dead Letter Queue (DLQ) Topic — Enforces Observability-as-a-Service
+resource "google_pubsub_topic" "dlq_topic" {
+  name    = "${var.domain_name}-${var.topic_name}-dlq-${var.environment}"
+  project = var.project_id
+
+  labels = {
+    environment = var.environment
+    cost_center = var.cost_center
+    domain      = var.domain_name
+    type        = "streaming-dlq"
+  }
+}
+
+# 2. Main Streaming Event Topic
+resource "google_pubsub_topic" "main_topic" {
+  name    = "${var.domain_name}-${var.topic_name}-${var.environment}"
+  project = var.project_id
+
+  labels = {
+    environment = var.environment
+    cost_center = var.cost_center
+    domain      = var.domain_name
+    type        = "streaming-main"
+  }
+}
+
+# 3. Subscription with Automated DLQ Routing
+resource "google_pubsub_subscription" "main_subscription" {
+  name    = "${var.domain_name}-${var.topic_name}-sub-${var.environment}"
+  project = var.project_id
+  topic   = google_pubsub_topic.main_topic.name
+
+  dead_letter_policy {
+    dead_letter_topic     = google_pubsub_topic.dlq_topic.id
+    max_delivery_attempts = 5
+  }
+
+  labels = {
+    environment = var.environment
+    cost_center = var.cost_center
+  }
+}
+
+# 4. Decoupled Identity for Real-time Compute (Dataflow)
+resource "google_service_account" "streaming_worker" {
+  account_id   = "sa-${replace(var.domain_name, "_", "-")}-str-${var.environment}"
+  display_name = "Dataflow Streaming Worker for ${var.domain_name}"
+  project      = var.project_id
+}
+```
+
+---
+
+## 🌐 Domain Implementation (domains/h1_gci_marketing) | (domains/dev/h1_gci_customer/main.tf)
 The domain configuration instantiates the BigQuery module and binds it to remote GCS state management.
 
-Domain Blueprint (domains/h1_gci_marketing/main.tf)
+Domain Blueprint (domains/h1_gci_marketing/main.tf) | (domains/dev/h1_gci_customer/main.tf) | and other domains
 
 ```
 terraform {
@@ -223,6 +297,16 @@ module "gci_marketing_silver_zone" {
     "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
 }
+
+# REAL-TIME ZONE - Pub/Sub Streaming & DLQ Infrastructure
+module "gci_customer_streaming_zone" {
+  source      = "../../../modules/data_platform_streaming"
+  project_id  = "gcp-terraform-tmp"
+  domain_name = "gci_customer"
+  environment = "dev"
+  cost_center = "customer_engineering"
+  topic_name  = "operational-events"
+}
 ```
 ---
 
@@ -261,6 +345,15 @@ cd domains
 cookiecutter ../templates/cookiecutter-gcp-domain-template
 ```
 
+**How to scaffold a new domain (Batch + Real-Time):**
+```
+# Execute Cookiecutter from root with output directory targeting and merge flags
+cookiecutter templates/cookiecutter-gcp-domain-template -o domains/ -f
+```
+Supported Options:
+
+**Include_realtime_streaming:** When set to yes, automatically injects the data_platform_streaming module into the domain's main.tf, generating Pub/Sub topics, DLQs, and Dataflow service accounts.
+
 ## ⚙️ CI/CD Pipeline & GitHub Actions Automation
 
 The CI/CD pipeline defined in ``.github/workflows/terraform-ci.yml`` validates every pull request and push to ``main`` or ``master``.
@@ -292,6 +385,7 @@ jobs:
       matrix:
         domain:
           - 'domains/dev/h0_core_iam'
+          - 'domains/dev/h1_gci_customer'
           - 'domains/dev/h1_gci_marketing'
           - 'domains/dev/h1_gci_sales'
           - 'domains/dev/h1_gci_inventory'
