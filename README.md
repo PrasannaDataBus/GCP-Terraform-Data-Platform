@@ -79,7 +79,8 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 .
 ├── .github/
 │   └── workflows/
-│       └── terraform-ci.yml          # GitHub Actions workflow for automated CI/CD validation
+│       ├── terraform-ci.yml          # CI: Validates formatting and syntax on Pull Requests
+│       └── terraform-cd.yml          # CD: Authenticates via ... & runs terraform apply on Master
 ├── modules/
 │   └── data_platform_bigquery/       # Core reusable module for BigQuery datasets & IAM
 │       ├── main.tf                   # Defines google_bigquery_dataset & IAM resources
@@ -108,6 +109,8 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 │   │   │   └── main.tf               # Dev Marketing Medallion (Raw & Silver) zones
 │   │   └── h1_gci_sales/
 │   │       └── main.tf               # Dev Sales Medallion (Raw & Silver) zones
+│   │   └── h1_gci_supply_chain/
+│   │       └── main.tf               # Dev Supply Chain Medallion (Raw) and Streaming zones
 │   └── prod/                         # Production Environment Domain Orchestrators
 │       ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
 │       ├── h1_gci_marketing/
@@ -359,24 +362,21 @@ Supported Options:
 
 **Include_realtime_streaming:** When set to yes, automatically injects the data_platform_streaming module into the domain's main.tf, generating Pub/Sub topics, DLQs, and Dataflow service accounts.
 
-## ⚙️ CI/CD Pipeline & GitHub Actions Automation
+---
 
-The CI/CD pipeline defined in ``.github/workflows/terraform-ci.yml`` validates every pull request and push to ``main`` or ``master``.
+## ⚙️ CI/CD Pipeline & GitHub Actions Automation (Two-Phase Dynamic Discovery)
 
-To prevent Platform Engineers from becoming a bottleneck, this pipeline uses a **Dynamic Execution Matrix**. Instead of hardcoding domain paths, Job 1 automatically scans the repository at runtime to discover all existing domains. Job 2 then consumes that JSON array to spin up parallel validation tasks instantly.
+To prevent Platform Engineers from becoming a deployment bottleneck, both pipelines utilize a Dynamic Execution Matrix. Instead of hardcoding domain paths, Job 1 automatically scans the repository at runtime to discover all active environments. Job 2 then consumes that JSON array to instantly spin up parallel validation and deployment tasks.
+
+**1. Continuous Integration (CI) — `.github/workflows/terraform-ci.yml`**
+Triggers exclusively on **Pull Requests**. It runs `terraform fmt` and `terraform validate` using `-backend=false`. It requires no GCP credentials and acts as a strict syntax gatekeeper before code can merge.
 
 ### Pipeline Execution Workflow (Dynamic Discovery)
 
-```
+```yaml
 name: Platform Infrastructure CI
 
 on:
-  push:
-    branches: [ main, master ]
-    paths:
-      - 'modules/**'
-      - 'domains/**'
-      - '.github/workflows/**'
   pull_request:
     branches: [ main, master ]
     paths:
@@ -385,7 +385,6 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  # JOB 1: Automatically discover all domain folders
   setup-matrix:
     name: 'Discover Domain Folders'
     runs-on: ubuntu-latest
@@ -400,10 +399,8 @@ jobs:
         run: |
           cd domains
           DIRS=$(find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | jq -R -s -c 'split("\n")[:-1]')
-          echo "Discovered domains: $DIRS"
           echo "matrix=$DIRS" >> $GITHUB_OUTPUT
 
-  # JOB 2: Run Terraform commands using the discovered folders
   terraform-validate:
     name: 'Validate (${{ matrix.target_dir }})'
     needs: setup-matrix
@@ -426,7 +423,7 @@ jobs:
           terraform fmt -check -recursive modules/
           terraform fmt -check -recursive domains/
 
-      - name: Terraform Init
+      - name: Terraform Init (No Backend)
         run: terraform init -backend=false
         working-directory: ./domains/${{ matrix.target_dir }}
 
@@ -434,6 +431,59 @@ jobs:
         run: terraform validate
         working-directory: ./domains/${{ matrix.target_dir }}
 ```
+
+**2. Continuous Deployment (CD) — `.github/workflows/terraform-cd.yml`**
+
+Triggers exclusively on Pushes to Master. It securely authenticates to GCP using a vaulted Service Account JSON key (GCP_SA_KEY), connects to the remote GCS state, and physically provisions the infrastructure via terraform apply -auto-approve.
+
+```yaml
+name: Platform Infrastructure CD (Deploy)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'modules/**'
+      - 'domains/**'
+
+jobs:
+  setup-matrix:
+    # (Same Dynamic Discovery Job as CI)
+    name: 'Discover Domain Folders'
+    runs-on: ubuntu-latest
+    # ...
+
+  terraform-apply:
+    name: 'Deploy (${{ matrix.target_dir }})'
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target_dir: ${{ fromJson(needs.setup-matrix.outputs.target_dirs) }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.2
+
+      - name: Terraform Init (Connects to GCS State)
+        run: terraform init
+        working-directory: ./domains/${{ matrix.target_dir }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ./domains/${{ matrix.target_dir }}
+```
+
 ---
 
 ## 🚀 Execution Workflow & Daily Operations
@@ -528,7 +578,7 @@ Infrastructure access is granted via dedicated IAM bindings ```(roles/bigquery.d
 
 Hardcoded credentials, JSON keys, and local state files are strictly excluded from git via ```.gitignore```.
 
-3. State Encryption:
+**3. State Encryption:**
 
 Remote state stored in GCS is encrypted at rest using Google-managed encryption keys (CMEK ready).
 
