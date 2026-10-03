@@ -99,9 +99,9 @@ jobs:
       # Step 3: Check if the engineer properly formatted their code locally.
       # This runs globally across the whole repository. If they didn't, the pipeline fails here.
       - name: Terraform Format Check
-          run: |
-            terraform fmt -check -recursive modules/
-            terraform fmt -check -recursive domains/
+        run: |
+          terraform fmt -check -recursive modules/
+          terraform fmt -check -recursive domains/
 
       # Step 4: Initialize the specific domain.
       # -backend=false tells Terraform to skip trying to authenticate with the GCP Storage Bucket,
