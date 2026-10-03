@@ -422,7 +422,9 @@ jobs:
           terraform_version: 1.16.2
 
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+        run: |
+          terraform fmt -check -recursive modules/
+          terraform fmt -check -recursive domains/
 
       - name: Terraform Init
         run: terraform init -backend=false
@@ -506,7 +508,7 @@ Why we separate ``modules/`` and ``domains/`` instead of keeping all code in one
 "Separating modules from domains enforces the DRY (Don't Repeat Yourself) principle and controls the blast radius. The module acts as an enterprise template containing security standards, labeling policies, and IAM rules. The domain layer simply consumes the module and passes specific parameters. This guarantees that deploying changes to Marketing will never interfere with Sales state files or resources."
 
 Why we use ```-backend=false``` during ```terraform init``` in your GitHub Actions pipeline?
-"Our CI pipeline runs static code checks (```terraform fmt``` and ```terraform validate```). Because these steps only inspect code syntax and structural integrity, they do not require access to live cloud state. Running ```terraform init -backend=false``` allows the pipeline to validate code quickly and securely without needing GCP service account credentials inside the CI runner environment."
+"Our CI pipeline runs static code checks (`terraform fmt` and `terraform validate`). Because these steps only inspect code syntax and structural integrity, they do not require access to live cloud state. Running `terraform init -backend=false` allows the pipeline to validate code quickly and securely without needing GCP service account credentials inside the CI runner environment."
 
 How we prevent state file corruption when multiple engineers work on infrastructure?
 "We store our state files in a central Google Cloud Storage bucket with uniform access controls and object versioning. Terraform uses GCS native state locking—when an engineer or pipeline executes ```terraform plan``` or ```apply```, a lock file is written to the GCS bucket, preventing concurrent writes and state corruption."
