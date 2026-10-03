@@ -3,18 +3,6 @@ name: Platform Infrastructure CI
 
 # The 'on' block defines exactly WHEN this pipeline is allowed to run.
 on:
-  push:
-    # Triggers automatically when code is merged or pushed directly to these branches.
-    branches:
-      - main
-      - master
-    # Path filtering saves compute costs. The pipeline will ONLY run if files inside
-    # these three specific folders are changed. If you just edit the root README.md,
-    # the pipeline ignores it and stays quiet.
-    paths:
-      - 'modules/**'
-      - 'domains/**'
-      - '.github/workflows/**'
   pull_request:
     # Triggers when an engineer opens a PR asking to merge their branch into main/master.
     branches:
