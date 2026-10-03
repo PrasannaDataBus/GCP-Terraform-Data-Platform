@@ -1,0 +1,104 @@
+# This is the name of the workflow that appears in the "Actions" tab in GitHub.
+name: Platform Infrastructure CD (Deploy)
+
+# The 'on' block defines exactly WHEN this pipeline is allowed to run.
+on:
+  push:
+    # UNLIKE the CI pipeline, this CD pipeline ONLY triggers when code is officially
+    # pushed or merged into the master branch. It does not run on Pull Requests.
+    branches:
+      - master
+    # Path filtering saves compute costs. The pipeline will ONLY run if actual
+    # infrastructure code is changed.
+    paths:
+      - 'modules/**'
+      - 'domains/**'
+
+jobs:
+  # =========================================================================================
+  # JOB 1: THE SCOUT (setup-matrix)
+  # Identical to your CI pipeline, this job looks inside the 'domains' folder,
+  # sees what environments exist, and creates a JSON list of them to hand over to Job 2.
+  # =========================================================================================
+  setup-matrix:
+    name: 'Discover Domain Folders'
+    runs-on: ubuntu-latest
+
+    # This declares a variable that Job 2 is allowed to read.
+    outputs:
+      target_dirs: ${{ steps.set-dirs.outputs.matrix }}
+
+    steps:
+      # Step 1: Download the repository code onto the GitHub runner.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: The script that makes this pipeline "Dynamic"
+      - name: Scan directories and output JSON
+        id: set-dirs
+        run: |
+          cd domains
+          # Finds all domain folders exactly two levels deep, strips the leading './', 
+          # and formats them into a valid JSON array using jq.
+          DIRS=$(find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | jq -R -s -c 'split("\n")[:-1]')
+          
+          # Prints the list to the GitHub Actions console for debugging.
+          echo "Discovered domains: $DIRS"
+          
+          # Saves the JSON array so Job 2 can grab it.
+          echo "matrix=$DIRS" >> $GITHUB_OUTPUT
+
+
+  # =========================================================================================
+  # JOB 2: THE BUILDER (terraform-apply)
+  # This job takes the JSON list from Job 1, clones itself, and physically provisions
+  # the infrastructure in Google Cloud in parallel for every discovered domain.
+  # =========================================================================================
+  terraform-apply:
+    # This dynamic name means the GitHub UI will show parallel jobs named:
+    # "Deploy (dev/h1_gci_marketing)", "Deploy (prod/h1_gci_sales)", etc.
+    name: 'Deploy (${{ matrix.target_dir }})'
+
+    # CRITICAL: This tells GitHub Actions it MUST wait for Job 1 to finish successfully first.
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+
+    strategy:
+      # This grabs the JSON array from Job 1 and spins up a separate, parallel runner
+      # for every item in that array.
+      matrix:
+        target_dir: ${{ fromJson(needs.setup-matrix.outputs.target_dirs) }}
+
+    steps:
+      # Step 1: Download the repository code onto this specific parallel runner.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: SECURE AUTHENTICATION (New for CD)
+      # Unlike CI, this pipeline actually builds things in GCP. It uses the GitHub Secret
+      # we created (GCP_SA_KEY) to securely log in as your Terraform Service Account.
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Step 3: Install the Terraform CLI on the runner.
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.2
+
+      # Step 4: Initialize the specific domain (New for CD)
+      # Notice we REMOVED '-backend=false'. Because we are deploying to production,
+      # Terraform MUST connect to the remote GCS state bucket to see what infrastructure
+      # already exists before making changes.
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./domains/${{ matrix.target_dir }}
+
+      # Step 5: Physically create the infrastructure (New for CD)
+      # The '-auto-approve' flag is required because pipelines are automated and cannot
+      # pause to let a human type "yes" in the terminal. It reads the code and applies it instantly.
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ./domains/${{ matrix.target_dir }}
