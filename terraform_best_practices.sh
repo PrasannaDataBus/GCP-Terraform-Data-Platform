@@ -320,3 +320,9 @@ cookiecutter templates/cookiecutter-gcp-domain-template -o domains/ -f
 cd domains/dev/h1_gci_customer
 terraform init -backend=false
 terraform validate
+
+# git codes:
+
+# Create / Switch to a dedicated branch
+
+git checkout -b feature/ci-pipeline-test
