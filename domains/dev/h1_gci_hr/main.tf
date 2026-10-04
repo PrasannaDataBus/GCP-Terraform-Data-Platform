@@ -52,3 +52,5 @@ module "gci_hr_silver_zone" {
     "serviceAccount:dbt-dev-worker@gcp-terraform-tmp.iam.gserviceaccount.com"
   ]
 }
+
+# CI/CD Validation Test: Ensuring PR gatekeeper activates
