@@ -146,6 +146,14 @@ terraform init -migrate-state
 cd "C:\Users\prasa\Root\Terraform Infrastructure"
 terraform fmt -recursive
 
+# 1B. Format Code (Run from project root to format only domains)
+cd "C:\Users\prasa\Root\Terraform Infrastructure"
+terraform fmt -recursive domains/
+
+# 1C. Format Code (Run from project root to format only a particular domain)
+cd "C:\Users\prasa\Root\Terraform Infrastructure"
+terraform fmt -recursive domains/dev/h1_gci_hr/
+
 # 2. Navigate to Domain Directory (Example: Dev Marketing)
 cd "C:\Users\prasa\Root\Terraform Infrastructure\domains\dev\h1_gci_marketing"
 
