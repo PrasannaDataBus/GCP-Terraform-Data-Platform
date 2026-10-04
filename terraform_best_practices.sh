@@ -143,14 +143,17 @@ terraform init -migrate-state
 # ==================================================================================================
 
 # 1. Format Code (Run from project root to format ALL modules and domains)
+# It should be used whenever you format a module or domain file
 cd "C:\Users\prasa\Root\Terraform Infrastructure"
 terraform fmt -recursive
 
 # 1B. Format Code (Run from project root to format only domains)
+# It should be used whenever you format a module or domain file
 cd "C:\Users\prasa\Root\Terraform Infrastructure"
 terraform fmt -recursive domains/
 
 # 1C. Format Code (Run from project root to format only a particular domain)
+# It should be used whenever you format a module or domain file
 cd "C:\Users\prasa\Root\Terraform Infrastructure"
 terraform fmt -recursive domains/dev/h1_gci_hr/
 
@@ -326,3 +329,5 @@ terraform validate
 # Create / Switch to a dedicated branch
 
 git checkout -b feature/ci-pipeline-test
+
+git checkout -b feature/terraform-best-practices
