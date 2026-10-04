@@ -43,7 +43,7 @@ resource "google_pubsub_subscription" "main_subscription" {
   name    = "${var.domain_name}-${var.topic_name}-sub-${var.environment}"
   project = var.project_id
   # We link this subscription directly to the main topic created above.
-  topic   = google_pubsub_topic.main_topic.name
+  topic = google_pubsub_topic.main_topic.name
 
   # Why we do this: This is the automated observability trigger. If Dataflow pulls
   # a message and crashes, Pub/Sub will retry. If it fails 5 times, Pub/Sub stops
