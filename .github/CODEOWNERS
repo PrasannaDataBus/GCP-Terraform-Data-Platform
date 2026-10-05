@@ -1,0 +1,18 @@
+# Goal:
+
+# This file is the technical enforcement of your community boundaries. It ensures that domain teams can freely iterate
+# on their own infrastructure, but strictly prevents them from altering core platform blueprints or other teams'
+# environments without architect approval.
+
+# ENTERPRISE PLATFORM CODEOWNERS
+# Enforces decentralized autonomy while protecting core platform blueprints.
+
+# 1. Platform Core (Requires Central Platform Team Approval)
+/modules/                       @Kering-Data/platform-architects
+/.github/workflows/             @Kering-Data/platform-architects
+/templates/                     @Kering-Data/platform-architects
+
+# 2. Domain Autonomy (Domain teams own their respective landing zones)
+/domains/*/h1_gci_marketing/    @Kering-Data/marketing-data-engineers
+/domains/*/h1_gci_finance/      @Kering-Data/finance-data-engineers
+/domains/*/h1_gci_customer/     @Kering-Data/customer-data-engineers
