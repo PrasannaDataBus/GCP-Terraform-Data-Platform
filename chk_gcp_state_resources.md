@@ -4,7 +4,38 @@ This operational checklist provides step-by-step terminal commands to inspect li
 
 ---
 
-## 🧭 Section 1: Session & Project Context Verification
+## 🚀 Section 1: Initialization & Remote State Migration
+
+Before executing any infrastructure audits or team deployments, the central Google Cloud Storage (GCS) backend must be provisioned and local state files migrated to the cloud. This enables native state locking, prevents configuration drift, and ensures secure team collaboration.
+
+**1. Provision the Central State Bucket**
+Create the GCS bucket in your target region and explicitly enable uniform bucket-level access to ensure IAM policies govern the state files securely.
+```bash
+gcloud storage buckets create gs://gcp-terraform-tmp-tfstate-prasanna --location=europe-west1 --uniform-bucket-level-access
+```
+
+**2. Enable Object Versioning for State Recovery**
+Versioning acts as disaster recovery mechanism. If an engineer accidentally corrupts the state file, this allows the platform team to instantly roll back to a previous, healthy execution state.
+```bash
+gcloud storage buckets update gs://gcp-terraform-tmp-tfstate-prasanna --versioning
+```
+
+**3. Migrate Local State to the Remote Backend**
+Once backend "gcs" block is defined in domain's Terraform configuration, navigate to the specific directory and initialize the migration. Terraform will detect the local terraform.tfstate and move it to your new bucket.
+
+```bash
+# Navigate to the target domain orchestration directory
+cd domains/dev/h1_gci_marketing
+
+# Initialize the new GCS backend and migrate the local state
+terraform init -migrate-state
+
+Note: When the terminal prompts: "Do you want to copy existing state to the new backend?", type yes and press Enter. Once complete, delete any residual terraform.tfstate files from your local machine to prevent accidental local execution.
+```
+
+---
+
+## 🧭 Section 2: Session & Project Context Verification
 
 Ensure your local terminal session is authenticated and targeting the correct GCP sandbox environment before executing audit commands.
 
@@ -21,7 +52,7 @@ gcloud config get-value project
 
 ---
 
-## 🪣 Section 2: GCS Remote State Backend Audit
+## 🪣 Section 3: GCS Remote State Backend Audit
 
 Inspect the remote state bucket ```(gs://gcp-terraform-tmp-tfstate-prasanna)``` to confirm bucket security settings, uniform access control, versioning status, and remote state lock objects.
 
@@ -69,7 +100,7 @@ gcloud storage ls --long gs://gcp-terraform-tmp-tfstate-prasanna/domains/dev/h1_
 
 ---
 
-## 📊 Section 3: BigQuery Landing Zone & FinOps Metadata Audit
+## 📊 Section 4: BigQuery Landing Zone & FinOps Metadata Audit
 
 Verify that BigQuery datasets provisioned via Terraform contain mandatory FinOps labels (`cost_center`, `data_sensitivity`, `environment`, `managed_by`) and correct IAM bindings.
 
@@ -98,7 +129,7 @@ Verify that BigQuery datasets provisioned via Terraform contain mandatory FinOps
 
 ---
 
-## 🔐 Section 4: IAM & Security Binding Verification
+## 🔐 Section 5: IAM & Security Binding Verification
 
 Audit the service accounts and permissions granted at the dataset level.
 
@@ -110,7 +141,7 @@ bq show --format=prettyjson gcp-terraform-tmp:dev_raw_gci_marketing | Select-Str
 
 ```Expected Role: roles/bigquery.dataEditor bound to serviceAccount:airflow-platform-worker@gcp-terraform-tmp.iam.gserviceaccount.com```
 
-## 💰 Section 5: Real-Time FinOps Cost Assessment
+## 💰 Section 6: Real-Time FinOps Cost Assessment
 
 | Infrastructure Component | Provisioned Resource                      | Live Size / Count | Monthly Cost | Cost Justification |
 | :--- |:------------------------------------------| :--- | :--- | :--- |
@@ -120,7 +151,7 @@ bq show --format=prettyjson gcp-terraform-tmp:dev_raw_gci_marketing | Select-Str
 | **CI/CD Pipeline** | GitHub Actions (`terraform-ci.yml`)       | ~5 Runs | **$0.00** | Covered under GitHub 2,000 free runner minutes/month |
 | **Total Monthly Spend** | —                                         | — | **$0.00 / month** | **100% Free Sandbox** |
 
-## ⚡ Section 6: Automated Terminal One-Liner Audit Script
+## ⚡ Section 7: Automated Terminal One-Liner Audit Script
 
 Run this single PowerShell block to generate a complete platform health report directly in your console:
 
