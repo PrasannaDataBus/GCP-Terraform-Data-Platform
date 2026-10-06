@@ -9,7 +9,7 @@ terraform {
   required_providers {
     google = {
       # Pulls the official Google provider plugin required to interact with GCP APIs.
-      source  = "hashicorp/google"
+      source = "hashicorp/google"
       # Pins the provider version to avoid breaking changes if a new major version is released.
       version = "~> 8.4.0"
     }
@@ -43,7 +43,7 @@ provider "google" {}
 module "inventory_landing_zone" {
   source = "../../../modules/data_platform_bigquery"
 
-  project_id       = "gcp-terraform-tmp"
+  project_id = "gcp-terraform-tmp"
   # Omit the "raw" or "silver" label to create a flexible, general-purpose dataset.
   dataset_id       = "dev_inventory"
   cost_center      = "bv_inventory_emea"
