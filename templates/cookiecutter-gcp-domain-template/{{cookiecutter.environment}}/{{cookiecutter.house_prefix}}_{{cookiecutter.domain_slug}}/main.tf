@@ -9,7 +9,7 @@ terraform {
 
   backend "gcs" {
     bucket = "{{ cookiecutter.tfstate_gcs_bucket }}"
-    prefix = "domains/{{ cookiecutter.environment }}/h1_{{ cookiecutter.domain_slug }}"
+    prefix = "domains/{{ cookiecutter.environment }}/{{cookiecutter.house_prefix}}_{{cookiecutter.domain_slug}}"
   }
 }
 
@@ -60,7 +60,7 @@ module "{{ cookiecutter.domain_slug }}_streaming_zone" {
   source = "../../../modules/data_platform_streaming"
 
   project_id  = "{{ cookiecutter.gcp_project_id }}"
-  domain_name = "{{ cookiecutter.domain_slug }}"
+  domain_name = "{{cookiecutter.house_prefix}}_{{cookiecutter.domain_slug}}"
   environment = "{{ cookiecutter.environment }}"
   cost_center = "{{ cookiecutter.cost_center }}"
   topic_name  = "operational-events"
