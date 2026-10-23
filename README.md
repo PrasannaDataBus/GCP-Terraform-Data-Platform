@@ -93,9 +93,9 @@ This repository solves those challenges by implementing a **Domain-Driven Data P
 ├── templates/                                # Scaffolding tools for platform automation
 │   └── cookiecutter-gcp-domain-template/     # Jinja-templated engine for new data domains
 │       ├── cookiecutter.json                 # Variables schema prompted to the engineer
-│       └── {{cookiecutter.environment}}/     # Dynamic environment folder[cite: 3]
-│           └── h1_{{cookiecutter.domain_slug}}/ # Dynamic domain folder[cite: 3]
-│               └── main.tf                   # Templated Medallion dataset orchestrator[cite: 3]
+│       └── {{cookiecutter.environment}}/     # Dynamic environment folder
+│           └── h1_{{cookiecutter.domain_slug}}/ # Dynamic domain folder
+│               └── main.tf                   # Templated Medallion dataset orchestrator
 ├── domains/
 │   ├── dev/                          # Development Environment Domain Orchestrators
 │   │   ├── h0_core_iam/              # Core IAM bindings & worker identities (Airflow/dbt)
