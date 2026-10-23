@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1820" height="1000" viewBox="0 0 1820 1000" font-family="Inter, 'DejaVu Sans', sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475467"/>
+    </marker>
+    <marker id="arrw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#98A2B3"/>
+    </marker>
+    <style>
+      .h1{font-size:36px;font-weight:700;fill:#101828}
+      .sub{font-size:19px;fill:#475467}
+      .colt{font-size:15px;font-weight:700;letter-spacing:1.6px;fill:#667085}
+      .bt{font-size:21px;font-weight:700;fill:#101828}
+      .bt2{font-size:18px;font-weight:700;fill:#101828}
+      .bs{font-size:15.5px;fill:#344054}
+      .sm{font-size:14.5px;fill:#475467}
+      .code{font-family:'DejaVu Sans Mono', monospace;font-size:13px;fill:#1D2939}
+      .chip{font-size:16px;font-weight:600;fill:#101828}
+      .chips{font-size:14px;fill:#475467}
+      .wipt{font-size:16px;font-weight:600;fill:#667085;font-style:italic}
+      .badge{font-size:12px;font-weight:700;letter-spacing:0.8px;fill:#B54708}
+      .card{fill:#FFFFFF;stroke:#D0D5DD;stroke-width:1.5}
+      .wipcard{fill:#FCFCFD;stroke:#98A2B3;stroke-width:1.5;stroke-dasharray:7 5}
+      .codebg{fill:#F2F4F7}
+      .line{stroke:#475467;stroke-width:2.2;fill:none}
+      .dline{stroke:#475467;stroke-width:2;fill:none;stroke-dasharray:6 5}
+      .lbl{font-size:13px;fill:#475467;font-style:italic}
+    </style>
+  </defs>
+
+  <rect width="1820" height="1000" rx="24" fill="#F8FAFC"/>
+
+  <text x="40" y="70" class="h1">GCP Terraform Data Platform</text>
+  <text x="40" y="104" class="sub">Domain-driven Infrastructure as Code · Terraform · GitHub Actions · FinOps governance · BigQuery · Pub/Sub</text>
+
+  <rect x="1440" y="48" width="340" height="64" rx="12" fill="#FFFFFF" stroke="#EAECF0" stroke-width="1.5"/>
+  <line x1="1462" y1="80" x2="1502" y2="80" stroke="#475467" stroke-width="2.5"/>
+  <text x="1512" y="86" class="sm">Live</text>
+  <line x1="1580" y1="80" x2="1620" y2="80" stroke="#98A2B3" stroke-width="2.5" stroke-dasharray="6 5"/>
+  <text x="1630" y="86" class="sm">Roadmap</text>
+
+  <text x="40" y="160" class="colt">AUTHOR</text>
+  <text x="340" y="160" class="colt">GITHUB ACTIONS</text>
+  <text x="720" y="160" class="colt">TERRAFORM</text>
+  <text x="1330" y="160" class="colt">GOOGLE CLOUD</text>
+
+  <!-- Author -->
+  <rect x="40" y="180" width="260" height="250" rx="14" class="card"/>
+  <text x="60" y="216" class="bt">Cookiecutter</text>
+  <text x="60" y="240" class="sm">Domain scaffolding</text>
+  <line x1="60" y1="256" x2="280" y2="256" stroke="#EAECF0" stroke-width="1.5"/>
+  <text x="60" y="284" class="bs">Prompts: environment,</text>
+  <text x="60" y="306" class="bs">house, domain</text>
+  <text x="60" y="336" class="bs">Pattern: Medallion</text>
+  <text x="60" y="358" class="bs">or single dataset</text>
+  <text x="60" y="388" class="bs">Optional streaming</text>
+  <text x="60" y="414" class="sm">→ new domain stack</text>
+
+  <path d="M170 430 V472" class="line" marker-end="url(#arr)"/>
+
+  <rect x="40" y="478" width="260" height="162" rx="14" class="card"/>
+  <text x="60" y="514" class="bt">Pull request</text>
+  <text x="60" y="538" class="sm">feature/* branch</text>
+  <line x1="60" y1="554" x2="280" y2="554" stroke="#EAECF0" stroke-width="1.5"/>
+  <text x="60" y="582" class="bs">PR template</text>
+  <text x="60" y="608" class="bs">CODEOWNERS review</text>
+
+  <!-- CI / CD -->
+  <path d="M300 560 H322 V290 H333" class="line" marker-end="url(#arr)"/>
+  <text x="250" y="160" class="lbl"></text>
+
+  <rect x="340" y="180" width="330" height="220" rx="14" class="card"/>
+  <rect x="340" y="180" width="8" height="220" rx="4" fill="#2E90FA"/>
+  <text x="364" y="216" class="bt">CI · on pull request</text>
+  <rect x="362" y="232" width="288" height="56" rx="8" class="codebg"/>
+  <text x="374" y="255" class="code">discover → fmt → init</text>
+  <text x="374" y="277" class="code">-backend=false → validate</text>
+  <text x="364" y="316" class="bs">Dynamic matrix: one parallel</text>
+  <text x="364" y="338" class="bs">job per domain, zero YAML edits</text>
+  <text x="364" y="372" class="bs">No cloud credentials needed</text>
+
+  <path d="M505 400 V420" class="line" marker-end="url(#arr)"/>
+  <text x="515" y="415" class="lbl">merge to master</text>
+
+  <rect x="340" y="424" width="330" height="216" rx="14" class="card"/>
+  <rect x="340" y="424" width="8" height="216" rx="4" fill="#12B76A"/>
+  <text x="364" y="460" class="bt">CD · on merge</text>
+  <rect x="362" y="476" width="288" height="56" rx="8" class="codebg"/>
+  <text x="374" y="499" class="code">discover → auth → init</text>
+  <text x="374" y="521" class="code">(GCS state) → apply</text>
+  <text x="364" y="560" class="bs">Parallel deploy per domain</text>
+  <text x="364" y="594" class="bs">Path-filtered: modules/</text>
+  <text x="364" y="616" class="bs">and domains/ only</text>
+
+  <path d="M670 532 H713" class="line" marker-end="url(#arr)"/>
+
+  <!-- Terraform: modules -->
+  <rect x="720" y="180" width="570" height="220" rx="16" fill="#F4F3FF" stroke="#D9D6FE" stroke-width="1.5"/>
+  <text x="740" y="208" class="colt" style="fill:#6941C6">BLUEPRINT LAYER · modules/</text>
+  <rect x="740" y="222" width="262" height="160" rx="12" class="card"/>
+  <text x="758" y="252" class="bt2">data_platform_bigquery</text>
+  <text x="758" y="282" class="bs">Dataset + IAM members</text>
+  <text x="758" y="306" class="bs">FinOps labels, validated</text>
+  <text x="758" y="330" class="bs">30-day sandbox expiry</text>
+  <text x="758" y="354" class="bs">Error-only log sink</text>
+  <rect x="1012" y="222" width="262" height="160" rx="12" class="card"/>
+  <text x="1030" y="252" class="bt2">data_platform_streaming</text>
+  <text x="1030" y="282" class="bs">Pub/Sub topic + DLQ</text>
+  <text x="1030" y="306" class="bs">Subscription, 5 retries</text>
+  <text x="1030" y="330" class="bs">Dedicated Dataflow</text>
+  <text x="1030" y="354" class="bs">service account</text>
+
+  <path d="M1005 400 V420" class="line" marker-end="url(#arr)"/>
+  <text x="1015" y="415" class="lbl">consumed by</text>
+
+  <!-- Terraform: domains -->
+  <rect x="720" y="424" width="570" height="216" rx="16" fill="#F4F3FF" stroke="#D9D6FE" stroke-width="1.5"/>
+  <text x="740" y="452" class="colt" style="fill:#6941C6">INSTANTIATION LAYER · domains/</text>
+  <rect x="740" y="466" width="170" height="156" rx="12" class="card"/>
+  <text x="756" y="494" class="bt2">h0 · Core</text>
+  <text x="756" y="520" class="sm">Worker identities</text>
+  <text x="756" y="542" class="sm">Airflow + dbt</text>
+  <text x="756" y="564" class="sm">service accounts</text>
+  <text x="756" y="586" class="sm">bigquery.jobUser</text>
+  <rect x="920" y="466" width="180" height="156" rx="12" class="card"/>
+  <text x="936" y="494" class="bt2">h1 · GCI</text>
+  <text x="936" y="520" class="sm">10 dev + 2 prod</text>
+  <text x="936" y="542" class="sm">Medallion zones</text>
+  <text x="936" y="564" class="sm">Raw + Silver</text>
+  <text x="936" y="586" class="sm">Finance, HR, Sales…</text>
+  <rect x="1110" y="466" width="164" height="156" rx="12" class="card"/>
+  <text x="1126" y="494" class="bt2">h2 · BV</text>
+  <text x="1126" y="520" class="sm">3 dev domains</text>
+  <text x="1126" y="542" class="sm">Medallion or</text>
+  <text x="1126" y="564" class="sm">single landing</text>
+  <text x="1126" y="586" class="sm">zone</text>
+
+  <path d="M1290 532 H1323" class="line" marker-end="url(#arr)"/>
+
+  <!-- GCP -->
+  <rect x="1330" y="180" width="450" height="460" rx="18" fill="#EEF4FF" stroke="#B2CCFF" stroke-width="1.5"/>
+  <rect x="1350" y="200" width="410" height="98" rx="12" class="card"/>
+  <text x="1368" y="230" class="bt2">BigQuery datasets</text>
+  <text x="1368" y="256" class="bs">27 datasets: dev_raw_* · dev_silver_* · prod_raw_*</text>
+  <text x="1368" y="280" class="sm">Labelled: cost_center · data_sensitivity · managed_by</text>
+  <rect x="1350" y="310" width="410" height="98" rx="12" class="card"/>
+  <text x="1368" y="340" class="bt2">IAM · least privilege</text>
+  <text x="1368" y="366" class="bs">Airflow writes Raw · dbt reads Raw, writes Silver</text>
+  <text x="1368" y="390" class="sm">Dataset-level grants to workload identities</text>
+  <rect x="1350" y="420" width="410" height="98" rx="12" class="card"/>
+  <text x="1368" y="450" class="bt2">Pub/Sub streaming</text>
+  <text x="1368" y="476" class="bs">Topic → subscription → dead-letter queue</text>
+  <text x="1368" y="500" class="sm">4 streaming-enabled domains</text>
+  <rect x="1350" y="530" width="410" height="92" rx="12" class="card"/>
+  <text x="1368" y="560" class="bt2">Cloud Logging sinks</text>
+  <text x="1368" y="586" class="bs">severity ≥ ERROR, one per dataset</text>
+  <text x="1368" y="608" class="sm">Failures visible without inflating logging cost</text>
+
+  <!-- State -->
+  <rect x="720" y="672" width="1060" height="78" rx="14" fill="#101828"/>
+  <text x="744" y="704" font-size="19" font-weight="700" fill="#FFFFFF">Remote state · Google Cloud Storage</text>
+  <text x="744" y="732" font-size="15" fill="#D0D5DD">One state prefix per domain stack (domains/dev/h1_gci_marketing …) · object versioning for rollback · native state locking</text>
+  <path d="M1005 644 V665" class="line" marker-end="url(#arr)"/>
+  <text x="1015" y="662" class="lbl">one prefix per stack</text>
+    <path d="M505 640 V711 H713" class="line" marker-end="url(#arr)"/>
+  <text x="515" y="700" class="lbl">init / apply against state</text>
+
+  <!-- Practices -->
+  <text x="40" y="808" class="colt">ENGINEERING PRACTICES</text>
+  <rect x="40" y="826" width="336" height="80" rx="12" class="card"/>
+  <text x="60" y="860" class="chip">Blast-radius isolation</text>
+  <text x="60" y="886" class="chips">Separate state per domain and environment</text>
+  <rect x="391" y="826" width="336" height="80" rx="12" class="card"/>
+  <text x="411" y="860" class="chip">FinOps by design</text>
+  <text x="411" y="886" class="chips">Mandatory labels enforced in modules</text>
+  <rect x="742" y="826" width="336" height="80" rx="12" class="card"/>
+  <text x="762" y="860" class="chip">Credential-free CI</text>
+  <text x="762" y="886" class="chips">Static checks with -backend=false</text>
+  <rect x="1093" y="826" width="336" height="80" rx="12" class="card"/>
+  <text x="1113" y="860" class="chip">Community standards</text>
+  <text x="1113" y="886" class="chips">CODEOWNERS · SECURITY · CONTRIBUTING</text>
+  <rect x="1444" y="826" width="336" height="80" rx="12" class="wipcard"/>
+  <text x="1464" y="860" class="wipt">Keyless CD</text>
+  <rect x="1680" y="842" width="84" height="24" rx="12" fill="#FEF0C7"/>
+  <text x="1690" y="859" class="badge">ROADMAP</text>
+  <text x="1464" y="886" class="chips">Workload Identity Federation</text>
+
+  <text x="40" y="958" class="sm">16 domain stacks · 2 reusable modules · 18 merged pull requests · github.com/PrasannaDataBus/GCP-Terraform-Data-Platform</text>
+</svg>
