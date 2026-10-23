@@ -1,5 +1,7 @@
 # 🧱 GCP Data Platform Infrastructure — Terraform & GitHub Actions
 
+![GCP Terraform Data Platform architecture](assets/terraform-architecture.png)
+
 ## Data Platform Automation, Infrastructure as Code (IaC) & CI/CD Engine
 
 This repository contains the enterprise-grade Infrastructure as Code (IaC) foundation for the Google Cloud Platform (GCP) Data Platform. Built with **HashiCorp Terraform** and automated via **GitHub Actions**, this platform provisions, governs, and scales modular data landing zones across multiple business domains with built-in FinOps labeling, strict IAM controls, and remote state isolation.
