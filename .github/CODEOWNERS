@@ -8,11 +8,11 @@
 # Enforces decentralized autonomy while protecting core platform blueprints.
 
 # 1. Platform Core (Requires Central Platform Team Approval)
-/modules/                       @DataBus-Data/platform-architects
-/.github/workflows/             @DataBus-Data/platform-architects
-/templates/                     @DataBus-Data/platform-architects
+/modules/                       @PrasannaDataBus/platform-architects
+/.github/workflows/             @PrasannaDataBus/platform-architects
+/templates/                     @PrasannaDataBus/platform-architects
 
 # 2. Domain Autonomy (Domain teams own their respective landing zones)
-/domains/*/h1_gci_marketing/    @DataBus-Data/marketing-data-engineers
-/domains/*/h1_gci_finance/      @DataBus-Data/finance-data-engineers
-/domains/*/h1_gci_customer/     @DataBus-Data/customer-data-engineers
+/domains/*/h1_gci_marketing/    @PrasannaDataBus/marketing-data-engineers
+/domains/*/h1_gci_finance/      @PrasannaDataBus/finance-data-engineers
+/domains/*/h1_gci_customer/     @PrasannaDataBus/customer-data-engineers
