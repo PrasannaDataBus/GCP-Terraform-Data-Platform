@@ -1,6 +1,6 @@
 ## Goal: 
 
-A standardized template forces every community member to pause and verify their code against Kering's FinOps and Security guardrails before triggering our CI matrix.
+A standardized template forces every community member to pause and verify their code against Enterprise's FinOps and Security guardrails before triggering our CI matrix.
 
 ## 🧱 Infrastructure Modification Request
 
